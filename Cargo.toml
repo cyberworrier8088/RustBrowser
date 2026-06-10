@@ -1,0 +1,10 @@
+[package]
+name = "RustBrowser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+winit = "0.28.7"  # window  creatin
+pixels = "0.14" # simple frame buffer rendring
+reqwest = "0.11" # http client
+html5ever = "0.27" # robust html parsing
