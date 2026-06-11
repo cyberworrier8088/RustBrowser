@@ -1,3 +1,5 @@
+use std::string;
+
 use crate::{
     dom::{Document, parse_html},
     net::fetch_page,
@@ -17,9 +19,13 @@ pub struct App {
     pub scroll_y: i32,
     pub mouse_x: i32,
     pub mouse_y: i32,
+
+    pub history: Vec<String>,
+    pub histroy_index: usize,
 }
 
 impl App {
+
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
             window,
@@ -32,6 +38,9 @@ impl App {
             scroll_y: 0,
             mouse_x: 0,
             mouse_y: 0,
+
+            history: vec![initial_url.to_string()],
+            histroy_index: 0,
         };
 
         app.load_current_url();
@@ -74,11 +83,23 @@ impl App {
         let next_url = self.typing_url.trim().to_string();
 
         if !next_url.is_empty() {
-            self.current_url = normalize_url(&next_url);
-            self.load_current_url();
+            let url = normalize_url(&next_url);
+            self.visit(url);
         }
 
         self.cancel_typing();
+    }
+
+    pub fn visit(&mut self, url: String) {
+        if self.histroy_index + 1 < self.history.len() {
+            self.history.truncate(self.histroy_index + 1);
+        }
+
+        self.history.push(url.clone());
+        self.histroy_index += 1;
+
+        self.current_url = url;
+        self.load_current_url();
     }
 
     pub fn click_link(&mut self) {
@@ -95,12 +116,32 @@ impl App {
                 resolve_url(&self.current_url, &link.url)
             })
         {
-            self.current_url = url;
+            self.visit(url);
+        }
+    }
+
+    pub fn go_back(&mut self) {
+        if self.histroy_index > 0 {
+            self.histroy_index -= 1;
+
+            self.current_url = self.history[self.histroy_index].clone();
+
+            self.load_current_url();
+        }
+    }
+
+    pub fn go_forward(&mut self) {
+        if self.histroy_index + 1 < self.history.len() {
+            self.histroy_index += 1;
+
+            self.current_url = self.history[self.histroy_index].clone();
+
             self.load_current_url();
         }
     }
 
     fn load_current_url(&mut self) {
+
         println!("Downloading {}...", self.current_url);
 
         match fetch_page(&self.current_url) {

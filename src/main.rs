@@ -97,6 +97,15 @@ fn handle_key(app: &mut App, key: Key) {
 
     match key {
         Key::Character(text) if text == "/" => app.start_typing(),
+
+        Key::Named(NamedKey::ArrowLeft) => {
+            app.go_back();
+        }
+
+        Key::Named(NamedKey::ArrowRight) => {
+            app.go_forward();
+        }
+
         _ => {}
     }
 }

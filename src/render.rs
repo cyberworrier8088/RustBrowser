@@ -4,9 +4,9 @@ use font8x8::{BASIC_FONTS, UnicodeFonts};
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
 
-const ADDRESS_BAR_HEIGHT: i32 = 34;
+const ADDRESS_BAR_HEIGHT: i32 = 44;
 const CONTENT_LEFT: i32 = 10;
-const CONTENT_TOP: i32 = 46;
+const CONTENT_TOP: i32 = 56;
 
 pub struct LinkBox {
     pub text: String,
@@ -56,7 +56,10 @@ fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typin
         current_url.to_string()
     };
 
-    draw_text_line(frame, &label, 14, 13, 1, [20, 22, 26, 255]);
+    draw_text_line(frame, "←", 12, 13, 1, [20,22,26,255]);
+    draw_text_line(frame, "→", 32, 13, 1, [20,22,26,255]);
+    draw_text_line(frame, "⟳", 52, 13, 1, [20,22,26,255]);
+    draw_text_line(frame, &label, 90, 13, 1, [20, 22, 26, 255]);
 }
 
 fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>, scroll_y: i32) {
