@@ -67,9 +67,24 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
 
     for element in &document.elements {
         match element {
-            Element::Heading(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 2, [255, 255, 255, 255]);
-                y += 16;
+            Element::Heading { level, text} => {
+                let scale = match level {
+                    1 => 3,
+                    2 => 2,
+                    3 => 2,
+                    4 => 1,
+                    5 => 1,
+                    _ => 1,
+                };
+                y = draw_wrapped_text(
+                    frame,
+                    text,
+                    CONTENT_LEFT,
+                    y,
+                    scale,
+                    [255, 255, 255, 255],
+                );
+                y += 12;
             }
             Element::Paragraph(text) => {
                 y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [225, 225, 225, 255]);
