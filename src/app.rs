@@ -4,6 +4,7 @@ use crate::{
     render::{LinkBox, draw_page},
 };
 use pixels::Pixels;
+use std::fs;
 use winit::{event::MouseScrollDelta, window::Window};
 
 pub struct Tab {
@@ -27,10 +28,8 @@ pub struct App {
 }
 
 impl App {
-
-
     pub fn new_tab(&mut self, url: &str) {
-        self.tabs.push(Tab{
+        self.tabs.push(Tab {
             document: Document::default(),
             current_url: url.to_string(),
             history: vec![url.to_string()],
@@ -182,7 +181,13 @@ impl App {
 
         println!("Downloading {}...", current_url);
 
-        match fetch_page(&current_url) {
+        let result = if current_url.ends_with(".html") {
+            fs::read_to_string(&current_url).map_err(|error| error.to_string())
+        } else {
+            fetch_page(&current_url)
+        };
+
+        match result {
             Ok(html) => {
                 println!("Downloaded {} bytes. Parsing HTML...", html.len());
                 let tab = self.current_tab_mut();

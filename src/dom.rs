@@ -10,6 +10,7 @@ pub enum Element {
     Heading(String),
     Paragraph(String),
     Link { text: String, url: String },
+    ListIteam(String),
 }
 
 impl Document {
@@ -42,6 +43,7 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
         match tag {
             "h1" | "h2" | "h3" => elements.push(Element::Heading(text)),
             "p" => elements.push(Element::Paragraph(text)),
+            "li" => elements.push(Element::ListIteam(text)),
             "a" => {
                 if let Some(url) = attrs
                     .borrow()

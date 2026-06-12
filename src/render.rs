@@ -91,6 +91,17 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
 
                 y += 12;
             }
+            Element::ListIteam(text) => {
+                y = draw_wrapped_text(
+                    frame,
+                    &format!("• {}", text),
+                    CONTENT_LEFT + 20,
+                    y,
+                    1,
+                    [97, 225, 225, 255],
+                );
+                y += 8;
+            }
         }
     }
 }
