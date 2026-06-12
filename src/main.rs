@@ -33,6 +33,8 @@ fn main() {
 
     let mut app = App::new(window, pixels, "https://example.com");
 
+    app.new_tab("https://www.rust-lang.org");
+
     println!("Running app...");
     event_loop
         .run(move |event, elwt| {

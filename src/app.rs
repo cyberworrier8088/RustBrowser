@@ -1,5 +1,3 @@
-use std::string;
-
 use crate::{
     dom::{Document, parse_html},
     net::fetch_page,
@@ -8,39 +6,67 @@ use crate::{
 use pixels::Pixels;
 use winit::{event::MouseScrollDelta, window::Window};
 
+pub struct Tab {
+    pub document: Document,
+    pub current_url: String,
+    pub history: Vec<String>,
+    pub history_index: usize,
+    pub scroll_y: i32,
+}
+
 pub struct App {
     pub window: Window,
     pub pixels: Pixels,
-    pub document: Document,
     pub links: Vec<LinkBox>,
-    pub current_url: String,
     pub typing_url: String,
     pub typing: bool,
-    pub scroll_y: i32,
     pub mouse_x: i32,
     pub mouse_y: i32,
-
-    pub history: Vec<String>,
-    pub histroy_index: usize,
+    pub tabs: Vec<Tab>,
+    pub active_tab: usize,
 }
 
 impl App {
+
+
+    pub fn new_tab(&mut self, url: &str) {
+        self.tabs.push(Tab{
+            document: Document::default(),
+            current_url: url.to_string(),
+            history: vec![url.to_string()],
+            history_index: 0,
+            scroll_y: 0,
+        });
+
+        self.active_tab = self.tabs.len() - 1;
+
+        self.load_current_url();
+    }
+    fn current_tab(&self) -> &Tab {
+        &self.tabs[self.active_tab]
+    }
+
+    fn current_tab_mut(&mut self) -> &mut Tab {
+        &mut self.tabs[self.active_tab]
+    }
 
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
             window,
             pixels,
-            document: Document::default(),
             links: Vec::new(),
-            current_url: initial_url.to_string(),
             typing_url: String::new(),
             typing: false,
-            scroll_y: 0,
             mouse_x: 0,
             mouse_y: 0,
-
-            history: vec![initial_url.to_string()],
-            histroy_index: 0,
+            tabs: vec![Tab {
+                document: Document::default(),
+                current_url: initial_url.to_string(),
+                history: vec![initial_url.to_string()],
+                history_index: 0,
+                scroll_y: 0,
+            }],
+            active_tab: 0,
         };
 
         app.load_current_url();
@@ -48,25 +74,30 @@ impl App {
     }
 
     pub fn draw(&mut self) {
+        let active = self.active_tab;
+        let document = &self.tabs[active].document;
+        let current_url = &self.tabs[active].current_url;
+        let scroll_y = self.tabs[active].scroll_y;
         let frame = self.pixels.frame_mut();
-
         draw_page(
             frame,
-            &self.document,
+            document,
             &mut self.links,
-            &self.current_url,
+            current_url,
             &self.typing_url,
             self.typing,
-            self.scroll_y,
+            scroll_y,
         );
-
         self.pixels.render().unwrap();
     }
 
     pub fn scroll(&mut self, delta: MouseScrollDelta) {
-        if let MouseScrollDelta::LineDelta(_, y) = delta {
-            self.scroll_y += (y as i32) * 20;
-        }
+        let amount = match delta {
+            MouseScrollDelta::LineDelta(_, y) => (y as i32) * 20,
+            MouseScrollDelta::PixelDelta(position) => position.y as i32,
+        };
+
+        self.current_tab_mut().scroll_y += amount;
     }
 
     pub fn start_typing(&mut self) {
@@ -91,14 +122,16 @@ impl App {
     }
 
     pub fn visit(&mut self, url: String) {
-        if self.histroy_index + 1 < self.history.len() {
-            self.history.truncate(self.histroy_index + 1);
+        let tab = self.current_tab_mut();
+
+        if tab.history_index + 1 < tab.history.len() {
+            tab.history.truncate(tab.history_index + 1);
         }
 
-        self.history.push(url.clone());
-        self.histroy_index += 1;
+        tab.history.push(url.clone());
+        tab.history_index += 1;
+        tab.current_url = url;
 
-        self.current_url = url;
         self.load_current_url();
     }
 
@@ -113,7 +146,7 @@ impl App {
             .find(|link| link.contains(self.mouse_x, self.mouse_y))
             .map(|link| {
                 println!("Opening link: {} -> {}", link.text, link.url);
-                resolve_url(&self.current_url, &link.url)
+                resolve_url(&self.current_tab().current_url, &link.url)
             })
         {
             self.visit(url);
@@ -121,40 +154,44 @@ impl App {
     }
 
     pub fn go_back(&mut self) {
-        if self.histroy_index > 0 {
-            self.histroy_index -= 1;
+        let tab = self.current_tab_mut();
 
-            self.current_url = self.history[self.histroy_index].clone();
+        if tab.history_index > 0 {
+            tab.history_index -= 1;
+
+            tab.current_url = tab.history[tab.history_index].clone();
 
             self.load_current_url();
         }
     }
 
     pub fn go_forward(&mut self) {
-        if self.histroy_index + 1 < self.history.len() {
-            self.histroy_index += 1;
+        let tab = self.current_tab_mut();
 
-            self.current_url = self.history[self.histroy_index].clone();
+        if tab.history_index + 1 < tab.history.len() {
+            tab.history_index += 1;
+
+            tab.current_url = tab.history[tab.history_index].clone();
 
             self.load_current_url();
         }
     }
 
     fn load_current_url(&mut self) {
+        let current_url = self.current_tab().current_url.clone();
 
-        println!("Downloading {}...", self.current_url);
+        println!("Downloading {}...", current_url);
 
-        match fetch_page(&self.current_url) {
+        match fetch_page(&current_url) {
             Ok(html) => {
                 println!("Downloaded {} bytes. Parsing HTML...", html.len());
-                self.document = parse_html(&html);
-                self.scroll_y = 0;
+                let tab = self.current_tab_mut();
+                tab.document = parse_html(&html);
+                tab.scroll_y = 0;
             }
             Err(error) => {
-                self.document = Document::from_message(format!(
-                    "Could not load {}\n\n{}",
-                    self.current_url, error
-                ));
+                self.current_tab_mut().document =
+                    Document::from_message(format!("Could not load {}\n\n{}", current_url, error));
             }
         }
     }

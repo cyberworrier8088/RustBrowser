@@ -56,10 +56,10 @@ fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typin
         current_url.to_string()
     };
 
-    draw_text_line(frame, "←", 12, 13, 1, [20,22,26,255]);
-    draw_text_line(frame, "→", 32, 13, 1, [20,22,26,255]);
-    draw_text_line(frame, "⟳", 52, 13, 1, [20,22,26,255]);
-    draw_text_line(frame, &label, 90, 13, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, "<", 12, 13, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, ">", 32, 13, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, "R", 52, 13, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, &label, 90, 13, 1, [20, 22, 26, 255]);
 }
 
 fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>, scroll_y: i32) {
@@ -128,7 +128,7 @@ fn draw_wrapped_text(
     y + line_height
 }
 
-fn draw_text_line(frame: &mut [u8], text: &str, x: i32, y: i32, scale: i32, color: [u8; 4]) {
+fn draw_text_line_raw(frame: &mut [u8], text: &str, x: i32, y: i32, scale: i32, color: [u8; 4]) {
     let mut cursor_x = x;
 
     for ch in text.chars() {
@@ -136,7 +136,7 @@ fn draw_text_line(frame: &mut [u8], text: &str, x: i32, y: i32, scale: i32, colo
             break;
         }
 
-        draw_char(frame, ch, cursor_x, y, scale, color);
+        draw_char_raw(frame, ch, cursor_x, y, scale, color);
         cursor_x += 8 * scale;
     }
 }
@@ -153,10 +153,36 @@ fn draw_char(frame: &mut [u8], ch: char, x: i32, y: i32, scale: i32, color: [u8;
     }
 }
 
+fn draw_char_raw(frame: &mut [u8], ch: char, x: i32, y: i32, scale: i32, color: [u8; 4]) {
+    if let Some(bitmap) = BASIC_FONTS.get(ch) {
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..8 {
+                if (bits >> col) & 1 == 1 {
+                    draw_scaled_pixel_raw(
+                        frame,
+                        x + col * scale,
+                        y + row as i32 * scale,
+                        scale,
+                        color,
+                    );
+                }
+            }
+        }
+    }
+}
+
 fn draw_scaled_pixel(frame: &mut [u8], x: i32, y: i32, scale: i32, color: [u8; 4]) {
     for offset_y in 0..scale {
         for offset_x in 0..scale {
             set_pixel(frame, x + offset_x, y + offset_y, color);
+        }
+    }
+}
+
+fn draw_scaled_pixel_raw(frame: &mut [u8], x: i32, y: i32, scale: i32, color: [u8; 4]) {
+    for offset_y in 0..scale {
+        for offset_x in 0..scale {
+            set_raw_pixel(frame, x + offset_x, y + offset_y, color);
         }
     }
 }
