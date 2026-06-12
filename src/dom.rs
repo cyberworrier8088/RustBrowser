@@ -71,6 +71,12 @@ fn collect_text(handle: &Handle) -> String {
 }
 
 fn append_text(handle: &Handle, text: &mut String) {
+    if let NodeData::Element { name, .. } = &handle.data {
+        if name.local.as_ref() == "br" {
+            text.push('\n');
+        }
+    }
+
     if let NodeData::Text { contents } = &handle.data {
         text.push_str(&contents.borrow());
         text.push(' ');
@@ -82,5 +88,8 @@ fn append_text(handle: &Handle, text: &mut String) {
 }
 
 fn clean_text(text: &str) -> String {
-    text.split_whitespace().collect::<Vec<_>>().join(" ")
+    text.lines()
+        .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

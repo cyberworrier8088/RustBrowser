@@ -120,23 +120,28 @@ fn draw_wrapped_text(
     let mut x = start_x;
     let mut y = start_y;
 
-    for word in text.split_whitespace() {
-        let word_width = word.chars().count() as i32 * char_width;
+    for line in text.split('\n') {
+        for word in line.split_whitespace() {
+            let word_width = word.chars().count() as i32 * char_width;
 
-        if x > start_x && x + word_width > max_x {
-            x = start_x;
-            y += line_height;
-        }
+            if x > start_x && x + word_width > max_x {
+                x = start_x;
+                y += line_height;
+            }
 
-        for ch in word.chars() {
-            draw_char(frame, ch, x, y, scale, color);
+            for ch in word.chars() {
+                draw_char(frame, ch, x, y, scale, color);
+                x += char_width;
+            }
+
             x += char_width;
         }
 
-        x += char_width;
+        x = start_x;
+        y += line_height;
     }
 
-    y + line_height
+    y
 }
 
 fn draw_text_line_raw(frame: &mut [u8], text: &str, x: i32, y: i32, scale: i32, color: [u8; 4]) {
