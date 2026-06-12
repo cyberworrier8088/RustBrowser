@@ -7,13 +7,13 @@ pub struct Document {
 }
 
 pub enum Element {
-    Heading {
-        level: u8,
-        text: String,
-    },
+    Heading { level: u8, text: String },
     Paragraph(String),
     Link { text: String, url: String },
     ListIteam(String),
+
+    Bold(String),
+    Italic(String),
 }
 
 impl Document {
@@ -44,32 +44,16 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
         }
 
         match tag {
-            "h1" => elements.push(Element::Heading {
-                level: 1,
-                text,
-            }),
-            "h2" => elements.push(Element::Heading {
-                level: 2,
-                text,
-            }),
-            "h3" => elements.push(Element::Heading {
-                level: 3,
-                text,
-            }),
-            "h4" => elements.push(Element::Heading {
-                level: 4,
-                text,
-            }),
-            "h5" => elements.push(Element::Heading {
-                level: 5,
-                text,
-            }),
-            "h6" => elements.push(Element::Heading {
-                level: 6,
-                text,
-            }),
+            "h1" => elements.push(Element::Heading { level: 1, text }),
+            "h2" => elements.push(Element::Heading { level: 2, text }),
+            "h3" => elements.push(Element::Heading { level: 3, text }),
+            "h4" => elements.push(Element::Heading { level: 4, text }),
+            "h5" => elements.push(Element::Heading { level: 5, text }),
+            "h6" => elements.push(Element::Heading { level: 6, text }),
             "p" => elements.push(Element::Paragraph(text)),
             "li" => elements.push(Element::ListIteam(text)),
+            "b" | "strong" => elements.push(Element::Bold(text)),
+            "i" | "em" => elements.push(Element::Italic(text)),
             "a" => {
                 if let Some(url) = attrs
                     .borrow()

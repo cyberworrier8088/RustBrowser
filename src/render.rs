@@ -67,7 +67,7 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
 
     for element in &document.elements {
         match element {
-            Element::Heading { level, text} => {
+            Element::Heading { level, text } => {
                 let scale = match level {
                     1 => 3,
                     2 => 2,
@@ -83,16 +83,17 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
                     y,
                     scale,
                     [255, 255, 255, 255],
+                    false,
                 );
                 y += 12;
             }
             Element::Paragraph(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [225, 225, 225, 255]);
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [225, 225, 225, 255], false);
                 y += 12;
             }
             Element::Link { text, url } => {
                 let start_y = y;
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [95, 170, 255, 255]);
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [95, 170, 255, 255], false);
                 let height = (y - start_y).max(10);
 
                 links.push(LinkBox {
@@ -109,13 +110,23 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
             Element::ListIteam(text) => {
                 y = draw_wrapped_text(
                     frame,
-                    &format!("• {}", text),
+                    &format!("* {}", text),
                     CONTENT_LEFT + 20,
                     y,
                     1,
                     [97, 225, 225, 255],
+                    false,
                 );
                 y += 8;
+            }
+            Element::Bold(text) => {
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 2, [255, 255, 255, 255], false);
+                y += 12;
+            }
+            Element::Italic(text) => {
+                // Option 1: Use a slightly smaller scale and a distinct color
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [200, 200, 200, 255], true);
+                y += 12;
             }
         }
     }
@@ -128,12 +139,14 @@ fn draw_wrapped_text(
     start_y: i32,
     scale: i32,
     color: [u8; 4],
+    italic: bool, // new
 ) -> i32 {
     let char_width = 8 * scale;
     let line_height = 12 * scale;
     let max_x = WIDTH as i32 - 10;
     let mut x = start_x;
     let mut y = start_y;
+    let shear = if italic { 0.35 } else { 0.0 };
 
     for line in text.split('\n') {
         for word in line.split_whitespace() {
@@ -145,7 +158,11 @@ fn draw_wrapped_text(
             }
 
             for ch in word.chars() {
-                draw_char(frame, ch, x, y, scale, color);
+                if italic {
+                    draw_char_italic(frame, ch, x, y, scale, color, shear);
+                } else {
+                    draw_char(frame, ch, x, y, scale, color);
+                }
                 x += char_width;
             }
 
@@ -255,5 +272,28 @@ fn set_raw_pixel(frame: &mut [u8], x: i32, y: i32, color: [u8; 4]) {
 fn clear(frame: &mut [u8], color: [u8; 4]) {
     for pixel in frame.chunks_exact_mut(4) {
         pixel.copy_from_slice(&color);
+    }
+}
+
+fn draw_char_italic(
+    frame: &mut [u8],
+    ch: char,
+    x: i32,
+    y: i32,
+    scale: i32,
+    color: [u8; 4],
+    shear: f32,
+) {
+    if let Some(bitmap) = BASIC_FONTS.get(ch) {
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..8 {
+                if (bits >> col) & 1 == 1 {
+                    let shear_offset = (row as f32 * scale as f32 * shear) as i32;
+                    let new_x = x + col * scale + shear_offset;
+                    let new_y = y + row as i32 * scale;
+                    draw_scaled_pixel(frame, new_x, new_y, scale, color);
+                }
+            }
+        }
     }
 }
