@@ -193,7 +193,7 @@ fn draw_char(frame: &mut [u8], ch: char, x: i32, y: i32, scale: i32, color: [u8;
     if let Some(bitmap) = BASIC_FONTS.get(ch) {
         for (row, bits) in bitmap.iter().enumerate() {
             for col in 0..8 {
-                if (bits >> col) & 1 == 1 {
+                if (bits >> col) & 1 != 0 {
                     draw_scaled_pixel(frame, x + col * scale, y + row as i32 * scale, scale, color);
                 }
             }
@@ -205,7 +205,7 @@ fn draw_char_raw(frame: &mut [u8], ch: char, x: i32, y: i32, scale: i32, color: 
     if let Some(bitmap) = BASIC_FONTS.get(ch) {
         for (row, bits) in bitmap.iter().enumerate() {
             for col in 0..8 {
-                if (bits >> col) & 1 == 1 {
+                if (bits >> col) & 1 != 0 {
                     draw_scaled_pixel_raw(
                         frame,
                         x + col * scale,
@@ -287,8 +287,8 @@ fn draw_char_italic(
     if let Some(bitmap) = BASIC_FONTS.get(ch) {
         for (row, bits) in bitmap.iter().enumerate() {
             for col in 0..8 {
-                if (bits >> col) & 1 == 1 {
-                    let shear_offset = (row as f32 * scale as f32 * shear) as i32;
+                if (bits >> col) & 1 != 0 {          
+                    let shear_offset = ((7 - row) as f32 * scale as f32 * shear) as i32;
                     let new_x = x + col * scale + shear_offset;
                     let new_y = y + row as i32 * scale;
                     draw_scaled_pixel(frame, new_x, new_y, scale, color);
