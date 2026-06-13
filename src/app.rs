@@ -101,9 +101,14 @@ impl App {
         let current_url = &self.tabs[active].current_url;
         let scroll_y = self.tabs[active].scroll_y;
         let frame = self.pixels.frame_mut();
+        
+        let tab_urls: Vec<String> = self.tabs.iter().map(|t| t.current_url.clone()).collect();
+        
         draw_page(
             frame,
             &mut self.image_cache,
+            &tab_urls,
+            self.active_tab,
             document,
             &mut self.links,
             current_url,
@@ -120,12 +125,16 @@ impl App {
             MouseScrollDelta::PixelDelta(position) => position.y as i32,
         };
 
-        self.current_tab_mut().scroll_y += amount;
+        let tab = self.current_tab_mut();
+        tab.scroll_y += amount;
+        if tab.scroll_y > 0 {
+            tab.scroll_y = 0;
+        }
     }
 
     pub fn start_typing(&mut self) {
         self.typing = true;
-        self.typing_url.clear();
+        self.typing_url = self.tabs[self.active_tab].current_url.clone();
     }
 
     pub fn cancel_typing(&mut self) {
@@ -158,11 +167,85 @@ impl App {
         self.load_current_url();
     }
 
-    pub fn click_link(&mut self) {
-        if self.typing {
+    pub fn close_tab(&mut self, index: usize) {
+        if self.tabs.len() <= 1 {
+            self.tabs[0] = Tab {
+                document: Document::default(),
+                current_url: "src/main.html".to_string(),
+                history: vec!["src/main.html".to_string()],
+                history_index: 0,
+                scroll_y: 0,
+            };
+            self.active_tab = 0;
+            self.load_current_url();
             return;
         }
 
+        self.tabs.remove(index);
+
+        if self.active_tab >= self.tabs.len() {
+            self.active_tab = self.tabs.len() - 1;
+        } else if self.active_tab == index && index > 0 {
+            self.active_tab = index - 1;
+        }
+
+        self.load_current_url();
+    }
+
+    pub fn click_link(&mut self) {
+        // 1. Check tab bar clicks (y in 2..26)
+        if self.mouse_y >= 2 && self.mouse_y <= 26 {
+            let mut tab_x = 10;
+            let num_tabs = self.tabs.len();
+            for i in 0..num_tabs {
+                if self.mouse_x >= tab_x && self.mouse_x < tab_x + 140 {
+                    if self.mouse_x >= tab_x + 140 - 20 {
+                        println!("GUI: Close tab {} clicked", i);
+                        self.close_tab(i);
+                    } else {
+                        println!("GUI: Switch to tab {} clicked", i);
+                        self.active_tab = i;
+                        self.cancel_typing();
+                    }
+                    return;
+                }
+                tab_x += 140 + 8;
+            }
+
+            if self.mouse_x >= tab_x && self.mouse_x < tab_x + 24 {
+                println!("GUI: New tab clicked");
+                self.new_tab("src/main.html");
+                return;
+            }
+        }
+
+        // 2. Check address bar input & buttons clicks (y in 36..62)
+        if self.mouse_y >= 36 && self.mouse_y <= 62 {
+            if self.mouse_x >= 8 && self.mouse_x < 28 {
+                println!("GUI: Back clicked");
+                self.go_back();
+                return;
+            } else if self.mouse_x >= 28 && self.mouse_x < 48 {
+                println!("GUI: Forward clicked");
+                self.go_forward();
+                return;
+            } else if self.mouse_x >= 48 && self.mouse_x < 68 {
+                println!("GUI: Reload clicked");
+                self.load_current_url();
+                return;
+            } else if self.mouse_x >= 80 && self.mouse_x < (800 - 8) {
+                println!("GUI: Address bar clicked");
+                self.start_typing();
+                return;
+            }
+        }
+
+        if self.typing {
+            self.cancel_typing();
+            return;
+        }
+
+        // 3. Check document link clicks
         if let Some(url) = self
             .links
             .iter()

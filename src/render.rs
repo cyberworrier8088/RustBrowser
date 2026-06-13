@@ -15,9 +15,11 @@ use crate::net::fetch_image;
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
 
-const ADDRESS_BAR_HEIGHT: i32 = 44;
+const TAB_BAR_HEIGHT: i32 = 28;
+const ADDRESS_BAR_HEIGHT: i32 = 72;
 const CONTENT_LEFT: i32 = 10;
-const CONTENT_TOP: i32 = 56;
+const CONTENT_TOP: i32 = 84;
+const TAB_WIDTH: i32 = 140;
 
 pub struct LinkBox {
     pub text: String,
@@ -34,9 +36,26 @@ impl LinkBox {
     }
 }
 
+fn get_tab_title(url: &str) -> String {
+    if url.starts_with("http://") || url.starts_with("https://") {
+        if let Ok(parsed) = reqwest::Url::parse(url) {
+            if let Some(host) = parsed.host_str() {
+                return host.replace("www.", "").to_string();
+            }
+        }
+    } else if let Some(filename) = std::path::Path::new(url).file_name() {
+        if let Some(s) = filename.to_str() {
+            return s.to_string();
+        }
+    }
+    url.to_string()
+}
+
 pub fn draw_page(
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    tab_urls: &[String],
+    active_tab: usize,
     document: &Document,
     links: &mut Vec<LinkBox>,
     current_url: &str,
@@ -47,11 +66,19 @@ pub fn draw_page(
     clear(frame, [12, 13, 16, 255]);
     links.clear();
 
-    draw_address_bar(frame, current_url, typing_url, typing);
+    draw_address_bar(frame, tab_urls, active_tab, current_url, typing_url, typing);
     draw_document(frame, cache, document, links, scroll_y);
 }
 
-fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typing: bool) {
+fn draw_address_bar(
+    frame: &mut [u8],
+    tab_urls: &[String],
+    active_tab: usize,
+    current_url: &str,
+    typing_url: &str,
+    typing: bool,
+) {
+    // 1. Address/Tab Bar Background
     fill_rect(
         frame,
         0,
@@ -60,7 +87,83 @@ fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typin
         ADDRESS_BAR_HEIGHT,
         [32, 35, 42, 255],
     );
-    fill_rect(frame, 8, 7, WIDTH as i32 - 16, 20, [245, 245, 245, 255]);
+
+    // 2. Draw Tabs
+    let mut tab_x = 10;
+    for (i, url) in tab_urls.iter().enumerate() {
+        let is_active = i == active_tab;
+        let bg_color = if is_active {
+            [66, 66, 72, 255]
+        } else {
+            [45, 45, 50, 255]
+        };
+
+        fill_rect(
+            frame,
+            tab_x,
+            2,
+            TAB_WIDTH,
+            24,
+            bg_color,
+        );
+
+        let title = get_tab_title(url);
+        let truncated_title = if title.len() > 12 {
+            format!("{}..", &title[..10])
+        } else {
+            title
+        };
+
+        draw_text_line_raw(
+            frame,
+            &truncated_title,
+            tab_x + 10,
+            10,
+            1,
+            [255, 255, 255, 255],
+        );
+
+        // Close button 'x' on the right of the tab
+        draw_text_line_raw(
+            frame,
+            "x",
+            tab_x + TAB_WIDTH - 18,
+            10,
+            1,
+            [160, 160, 160, 255],
+        );
+
+        tab_x += TAB_WIDTH + 8;
+    }
+
+    // Draw '+' new tab button
+    fill_rect(
+        frame,
+        tab_x,
+        2,
+        24,
+        24,
+        [45, 45, 50, 255],
+    );
+    draw_text_line_raw(
+        frame,
+        "+",
+        tab_x + 8,
+        10,
+        1,
+        [255, 255, 255, 255],
+    );
+
+    // 3. Address bar input field (white if active/typing, off-white if not)
+    let input_bg = if typing {
+        [255, 255, 255, 255]
+    } else {
+        [240, 240, 245, 255]
+    };
+    fill_rect(frame, 8, 36, WIDTH as i32 - 16, 26, input_bg);
+
+    // Separator line after reload button 'R'
+    fill_rect(frame, 78, 36, 1, 26, [200, 200, 205, 255]);
 
     let label = if typing {
         format!("/{typing_url}_")
@@ -68,10 +171,10 @@ fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typin
         current_url.to_string()
     };
 
-    draw_text_line_raw(frame, "<", 12, 13, 1, [20, 22, 26, 255]);
-    draw_text_line_raw(frame, ">", 32, 13, 1, [20, 22, 26, 255]);
-    draw_text_line_raw(frame, "R", 52, 13, 1, [20, 22, 26, 255]);
-    draw_text_line_raw(frame, &label, 90, 13, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, "<", 18, 45, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, ">", 38, 45, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, "R", 58, 45, 1, [20, 22, 26, 255]);
+    draw_text_line_raw(frame, &label, 90, 45, 1, [20, 22, 26, 255]);
 }
 
 fn draw_document(
