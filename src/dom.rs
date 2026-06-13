@@ -46,8 +46,8 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
 
         if !text.is_empty() || tag == "img" {
             match tag {
-                "h1" => elements.push(Element::Heading { level: 1, text }),
-                "h2" => elements.push(Element::Heading { level: 2, text }),
+                "h1" | "heading1" => elements.push(Element::Heading { level: 1, text }),
+                "h2" | "heading2" => elements.push(Element::Heading { level: 2, text }),
                 "h3" => elements.push(Element::Heading { level: 3, text }),
                 "h4" => elements.push(Element::Heading { level: 4, text }),
                 "h5" => elements.push(Element::Heading { level: 5, text }),
