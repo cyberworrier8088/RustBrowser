@@ -14,6 +14,11 @@ pub enum Element {
 
     Bold(String),
     Italic(String),
+
+    Image {
+        src: String,
+        alt: String,
+    }
 }
 
 impl Document {
@@ -39,32 +44,36 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
         let text = collect_text(handle);
         let text = clean_text(&text);
 
-        if text.is_empty() {
-            return;
-        }
-
-        match tag {
-            "h1" => elements.push(Element::Heading { level: 1, text }),
-            "h2" => elements.push(Element::Heading { level: 2, text }),
-            "h3" => elements.push(Element::Heading { level: 3, text }),
-            "h4" => elements.push(Element::Heading { level: 4, text }),
-            "h5" => elements.push(Element::Heading { level: 5, text }),
-            "h6" => elements.push(Element::Heading { level: 6, text }),
-            "p" => elements.push(Element::Paragraph(text)),
-            "li" => elements.push(Element::ListIteam(text)),
-            "b" | "strong" => elements.push(Element::Bold(text)),
-            "i" | "em" => elements.push(Element::Italic(text)),
-            "a" => {
-                if let Some(url) = attrs
-                    .borrow()
-                    .iter()
-                    .find(|attr| attr.name.local.as_ref() == "href")
-                    .map(|attr| attr.value.to_string())
-                {
-                    elements.push(Element::Link { text, url });
+        if !text.is_empty() || tag == "img" {
+            match tag {
+                "h1" => elements.push(Element::Heading { level: 1, text }),
+                "h2" => elements.push(Element::Heading { level: 2, text }),
+                "h3" => elements.push(Element::Heading { level: 3, text }),
+                "h4" => elements.push(Element::Heading { level: 4, text }),
+                "h5" => elements.push(Element::Heading { level: 5, text }),
+                "h6" => elements.push(Element::Heading { level: 6, text }),
+                "p" => elements.push(Element::Paragraph(text)),
+                "li" => elements.push(Element::ListIteam(text)),
+                "b" | "strong" => elements.push(Element::Bold(text)),
+                "i" | "em" => elements.push(Element::Italic(text)),
+                "img" => {
+                    let src = attrs.borrow().iter().find(|attr| attr.name.local.as_ref() == "src").map(|attr| attr.value.to_string()).unwrap_or_default();
+                    let alt = attrs.borrow().iter().find(|attr| attr.name.local.as_ref() == "alt").map(|attr| attr.value.to_string()).unwrap_or_default();
+                    println!("Found image: {}", src);
+                    elements.push(Element::Image { src, alt })
                 }
+                "a" => {
+                    if let Some(url) = attrs
+                        .borrow()
+                        .iter()
+                        .find(|attr| attr.name.local.as_ref() == "href")
+                        .map(|attr| attr.value.to_string())
+                    {
+                        elements.push(Element::Link { text, url });
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 

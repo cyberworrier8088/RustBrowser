@@ -1,5 +1,6 @@
 use crate::dom::{Document, Element};
 use font8x8::{BASIC_FONTS, UnicodeFonts};
+use image::GenericImageView;
 
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
@@ -127,6 +128,49 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
                 // Option 1: Use a slightly smaller scale and a distinct color
                 y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [200, 200, 200, 255], true);
                 y += 12;
+            }
+            Element::Image { src, alt } => {
+                if let Some(height) = draw_local_image(frame, src, CONTENT_LEFT, y) {
+                    y += height + 12;
+                } else {
+                    let box_width = 220;
+                    let box_height = 80;
+                    fill_rect(
+                        frame,
+                        CONTENT_LEFT,
+                        y,
+                        box_width,
+                        box_height,
+                        [45, 50, 60, 255],
+                    );
+                    draw_text_line_raw(
+                        frame,
+                        "[ IMAGE ]",
+                        CONTENT_LEFT + 10,
+                        y + 10,
+                        1,
+                        [255, 255, 255, 255],
+                    );
+                    draw_text_line_raw(
+                        frame,
+                        &format!("src: {}", src),
+                        CONTENT_LEFT + 10,
+                        y + 30,
+                        1,
+                        [180, 180, 180, 255],
+                    );
+                    if !alt.is_empty() {
+                        draw_text_line_raw(
+                            frame,
+                            alt,
+                            CONTENT_LEFT + 10,
+                            y + 50,
+                            1,
+                            [220, 220, 220, 255],
+                        );
+                    }
+                    y += box_height + 12;
+                }
             }
         }
     }
@@ -296,4 +340,55 @@ fn draw_char_italic(
             }
         }
     }
+}
+
+
+
+
+fn draw_local_image(
+    frame: &mut [u8],
+    path: &str,
+    x: i32,
+    y: i32,
+) -> Option<i32> {
+    let img = match image::ImageReader::open(path) {
+        Ok(reader) => match reader.with_guessed_format() {
+            Ok(reader) => match reader.decode() {
+                Ok(img) => img,
+                Err(e) => {
+                    println!("Error decoding image {}: {:?}", path, e);
+                    return None;
+                }
+            },
+            Err(e) => {
+                println!("Error guessing format for {}: {:?}", path, e);
+                return None;
+            }
+        },
+        Err(e) => {
+            println!("Error opening file {}: {:?}", path, e);
+            return None;
+        }
+    };
+
+    let scaled_img = img.thumbnail(300, 200);
+    let rgba = scaled_img.to_rgba8();
+
+    let width = rgba.width();
+    let height = rgba.height();
+
+    for py in 0..height {
+        for px in 0..width {
+            let pixel = rgba.get_pixel(px, py);
+
+            set_pixel(
+                frame,
+                x + px as i32,
+                y + py as i32,
+                pixel.0,
+            );
+        }
+    }
+
+    Some(height as i32)
 }
