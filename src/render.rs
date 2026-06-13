@@ -1,3 +1,12 @@
+// src/render.rs
+
+
+/////////////////////////
+// top of file
+/////////////////////////
+
+
+// import modules from other files
 use crate::dom::{Document, Element};
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
@@ -442,3 +451,8 @@ fn draw_network_image(
 
     Some(height as i32)
 }
+
+
+/////////////////////////
+// End of file
+/////////////////////////

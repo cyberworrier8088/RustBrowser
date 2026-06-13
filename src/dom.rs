@@ -1,6 +1,23 @@
+// src/dom.rs
+
+
+// dom: Document Object Model :)
+// introduction of dom: document object model is a programming interface for web documents.
+
+
+
+/////////////////////////
+// top of file
+/////////////////////////
+
+
+
+
+// using libraries
 use html5ever::{parse_document, tendril::TendrilSink};
 use markup5ever_rcdom::{Handle, NodeData, RcDom};
 
+// derive use for make default values
 #[derive(Default)]
 pub struct Document {
     pub elements: Vec<Element>,
@@ -112,3 +129,10 @@ fn clean_text(text: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+
+
+
+////////////////////////
+// End of file
+////////////////////////

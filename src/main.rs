@@ -1,8 +1,24 @@
+// src/main.rs :)
+
+// this is a browser made from scratch
+// this made for learning rust and how working web browser
+// this is not for production (*_*)
+// this is for fun
+// enjoy my code :)
+
+//////////////////////
+// top of file
+/////////////////////
+
+// import modules from other files
 mod app;
 mod dom;
 mod net;
 mod render;
 
+
+
+// useing libraries
 use app::App;
 use pixels::{Pixels, SurfaceTexture};
 use render::{HEIGHT, WIDTH};
@@ -14,6 +30,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+
+//  main function
 fn main() {
     println!("Creating EventLoop...");
     let event_loop = EventLoop::new().unwrap();
@@ -78,6 +96,7 @@ fn main() {
         .unwrap();
 }
 
+// handle keyboard input
 fn handle_key(app: &mut App, key: Key) {
     if app.typing {
         match key {
@@ -98,12 +117,16 @@ fn handle_key(app: &mut App, key: Key) {
     }
 
     match key {
+
+        // this for user type  "/" key to open address bar and type
         Key::Character(text) if text == "/" => app.start_typing(),
 
+        // this for go back for user can easly go back page
         Key::Named(NamedKey::ArrowLeft) => {
             app.go_back();
         }
 
+        // this for go forward for user can easly go forward page
         Key::Named(NamedKey::ArrowRight) => {
             app.go_forward();
         }
@@ -111,3 +134,12 @@ fn handle_key(app: &mut App, key: Key) {
         _ => {}
     }
 }
+
+
+
+
+
+
+/////////////////////////
+// End of file
+////////////////////////

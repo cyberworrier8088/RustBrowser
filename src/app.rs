@@ -1,12 +1,23 @@
+// src/app.rs :)
+
+
+//////////////////////////
+// start of file
+/////////////////////////
+
+// import modules from other files
 use crate::{
     dom::{Document, parse_html},
     net::fetch_page,
     render::{LinkBox, draw_page},
 };
+
+// useing libraries
 use pixels::Pixels;
 use std::fs;
 use winit::{event::MouseScrollDelta, window::Window};
 
+// tab struct
 pub struct Tab {
     pub document: Document,
     pub current_url: String,
@@ -15,6 +26,7 @@ pub struct Tab {
     pub scroll_y: i32,
 }
 
+// main browser struct
 pub struct App {
     pub window: Window,
     pub pixels: Pixels,
@@ -27,7 +39,10 @@ pub struct App {
     pub active_tab: usize,
 }
 
+// this is implementation of app struct
 impl App {
+
+    // create new tab
     pub fn new_tab(&mut self, url: &str) {
         self.tabs.push(Tab {
             document: Document::default(),
@@ -41,6 +56,7 @@ impl App {
 
         self.load_current_url();
     }
+
     fn current_tab(&self) -> &Tab {
         &self.tabs[self.active_tab]
     }
@@ -48,6 +64,7 @@ impl App {
     fn current_tab_mut(&mut self) -> &mut Tab {
         &mut self.tabs[self.active_tab]
     }
+
 
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
@@ -220,3 +237,9 @@ fn resolve_url(base_url: &str, url: &str) -> String {
         Err(_) => normalize_url(url),
     }
 }
+
+
+
+////////////////////////
+// End of file
+///////////////////////
