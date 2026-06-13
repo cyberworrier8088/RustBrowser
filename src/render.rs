@@ -36,6 +36,7 @@ impl LinkBox {
 
 pub fn draw_page(
     frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     document: &Document,
     links: &mut Vec<LinkBox>,
     current_url: &str,
@@ -47,7 +48,7 @@ pub fn draw_page(
     links.clear();
 
     draw_address_bar(frame, current_url, typing_url, typing);
-    draw_document(frame, document, links, scroll_y);
+    draw_document(frame, cache, document, links, scroll_y);
 }
 
 fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typing: bool) {
@@ -73,7 +74,13 @@ fn draw_address_bar(frame: &mut [u8], current_url: &str, typing_url: &str, typin
     draw_text_line_raw(frame, &label, 90, 13, 1, [20, 22, 26, 255]);
 }
 
-fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>, scroll_y: i32) {
+fn draw_document(
+    frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    document: &Document,
+    links: &mut Vec<LinkBox>,
+    scroll_y: i32,
+) {
     let mut y = CONTENT_TOP + scroll_y;
 
     for element in &document.elements {
@@ -146,7 +153,7 @@ fn draw_document(frame: &mut [u8], document: &Document, links: &mut Vec<LinkBox>
 
                 if is_network {
                     if let Some(height) =
-                        draw_network_image(frame, src, CONTENT_LEFT, y)
+                        draw_network_image(frame, cache, src, CONTENT_LEFT, y)
                     {
                         y += height + 12;
                         continue;
@@ -421,10 +428,38 @@ fn draw_local_image(
 
 fn draw_network_image(
     frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     url: &str,
     x: i32,
     y: i32,
 ) -> Option<i32> {
+
+    // try cache first
+
+    if let Some(rgba) = cache.get(url) {
+        println!("Cache HIT: {}", url);
+        let width = rgba.width();
+        
+        let height = rgba.height();
+        
+        for py in 0..height {
+            for px in 0..width {
+                let pixel = rgba.get_pixel(px, py);
+                set_pixel(
+                    frame,
+                    x + px as i32,
+                    y + py as i32,
+                    pixel.0,
+                );
+            }
+        }
+        
+        return Some(height as i32);
+    
+    }
+    
+    // try fetch
+
     let bytes = fetch_image(url).ok()?;
 
     let img = image::load_from_memory(&bytes).ok()?;
@@ -432,6 +467,13 @@ fn draw_network_image(
     let scaled_img = img.thumbnail(300, 200);
 
     let rgba = scaled_img.to_rgba8();
+
+    println!("Cache MISS: {}", url);
+
+    cache.insert(
+        url.to_string(),
+        rgba.clone(),
+    );
 
     let width = rgba.width();
     let height = rgba.height();

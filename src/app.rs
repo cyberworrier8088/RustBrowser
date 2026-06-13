@@ -37,6 +37,9 @@ pub struct App {
     pub mouse_y: i32,
     pub tabs: Vec<Tab>,
     pub active_tab: usize,
+
+    // for cache images
+    pub image_cache: std::collections::HashMap<String, image::RgbaImage>,
 }
 
 // this is implementation of app struct
@@ -68,6 +71,9 @@ impl App {
 
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
+            
+            image_cache: std::collections::HashMap::new(),
+            
             window,
             pixels,
             links: Vec::new(),
@@ -97,6 +103,7 @@ impl App {
         let frame = self.pixels.frame_mut();
         draw_page(
             frame,
+            &mut self.image_cache,
             document,
             &mut self.links,
             current_url,
