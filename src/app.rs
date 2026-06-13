@@ -207,8 +207,17 @@ impl App {
         match result {
             Ok(html) => {
                 println!("Downloaded {} bytes. Parsing HTML...", html.len());
+                let mut document = parse_html(&html);
+                
+                for element in &mut document.elements {
+                    if let crate::dom::Element::Image { src, .. } = element {
+                        *src = resolve_url(&current_url, src);
+                        println!(">> RESOLVED IMAGE SRC: {}", src);
+                    }
+                }
+                // Store the final result
                 let tab = self.current_tab_mut();
-                tab.document = parse_html(&html);
+                tab.document = document;
                 tab.scroll_y = 0;
             }
             Err(error) => {
@@ -227,7 +236,8 @@ fn normalize_url(url: &str) -> String {
     }
 }
 
-fn resolve_url(base_url: &str, url: &str) -> String {
+// func for user URL in the page correcting to go
+pub fn resolve_url(base_url: &str, url: &str) -> String {
     if url.starts_with("http://") || url.starts_with("https://") {
         return url.to_string();
     }
