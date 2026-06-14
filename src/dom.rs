@@ -1,4 +1,4 @@
-// src/dom.rs
+// src/dom.rs :)
 
 
 // dom: Document Object Model :)
@@ -35,7 +35,9 @@ pub enum Element {
     Image {
         src: String,
         alt: String,
-    }
+    },
+
+    HorizontalRule,
 }
 
 impl Document {
@@ -61,7 +63,7 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
         let text = collect_text(handle);
         let text = clean_text(&text);
 
-        if !text.is_empty() || tag == "img" {
+        if !text.is_empty() || tag == "img" || tag == "hr" {
             match tag {
                 "h1" | "heading1" => elements.push(Element::Heading { level: 1, text }),
                 "h2" | "heading2" => elements.push(Element::Heading { level: 2, text }),
@@ -89,6 +91,7 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
                         elements.push(Element::Link { text, url });
                     }
                 }
+                "hr" => elements.push(Element::HorizontalRule),
                 _ => {}
             }
         }

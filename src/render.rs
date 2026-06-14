@@ -63,7 +63,7 @@ pub fn draw_page(
     typing: bool,
     scroll_y: i32,
 ) {
-    clear(frame, [12, 13, 16, 255]);
+    clear(frame, [255, 255, 255, 255]);
     links.clear();
 
     draw_address_bar(frame, tab_urls, active_tab, current_url, typing_url, typing);
@@ -203,13 +203,13 @@ fn draw_document(
                     CONTENT_LEFT,
                     y,
                     scale,
-                    [255, 255, 255, 255],
+                    [0, 0, 0, 255],
                     false,
                 );
                 y += 12;
             }
             Element::Paragraph(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [225, 225, 225, 255], false);
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [0, 0, 0, 255], false);
                 y += 12;
             }
             Element::Link { text, url } => {
@@ -235,18 +235,17 @@ fn draw_document(
                     CONTENT_LEFT + 20,
                     y,
                     1,
-                    [97, 225, 225, 255],
+                    [0, 0, 0, 255],
                     false,
                 );
                 y += 8;
             }
             Element::Bold(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 2, [255, 255, 255, 255], false);
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 2, [0, 0, 0, 255], false);
                 y += 12;
             }
             Element::Italic(text) => {
-                // Option 1: Use a slightly smaller scale and a distinct color
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [200, 200, 200, 255], true);
+                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [0, 0, 0, 255], true);
                 y += 12;
             }
             Element::Image { src, alt } => {
@@ -307,6 +306,11 @@ fn draw_document(
                     );
                 }
                 y += box_height + 12;
+            }
+
+            Element::HorizontalRule => {
+                draw_horizontal_line(frame, y);
+                y += 20;
             }
         }
     }
@@ -597,6 +601,18 @@ fn draw_network_image(
     Some(height as i32)
 }
 
+
+
+// horizontal line render function
+fn draw_horizontal_line(frame: &mut [u8], y: i32) {
+    let start_x = 20;
+
+    let end_x = WIDTH as i32 - 20;
+
+    for x in start_x..end_x {
+        set_pixel(frame, x, y, [200, 200, 200, 255]);
+    }
+}
 
 /////////////////////////
 // End of file

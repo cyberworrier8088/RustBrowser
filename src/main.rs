@@ -131,6 +131,11 @@ fn handle_key(app: &mut App, key: Key) {
             app.go_forward();
         }
 
+        // this for bookmark for user can easly bookmark page
+        Key::Character(text) if text == "b" => {
+            app.add_bookmark();
+        }
+
         _ => {}
     }
 }

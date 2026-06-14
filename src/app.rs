@@ -24,6 +24,7 @@ pub struct Tab {
     pub history: Vec<String>,
     pub history_index: usize,
     pub scroll_y: i32,
+    pub favicon: Option<String>,
 }
 
 // main browser struct
@@ -40,10 +41,16 @@ pub struct App {
 
     // for cache images
     pub image_cache: std::collections::HashMap<String, image::RgbaImage>,
+
+    // book marks
+    pub bookmarks: Vec<String>,
 }
 
 // this is implementation of app struct
 impl App {
+
+
+
 
     // create new tab
     pub fn new_tab(&mut self, url: &str) {
@@ -53,6 +60,7 @@ impl App {
             history: vec![url.to_string()],
             history_index: 0,
             scroll_y: 0,
+            favicon: None,
         });
 
         self.active_tab = self.tabs.len() - 1;
@@ -72,6 +80,10 @@ impl App {
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
             
+            // bookmark
+            bookmarks: Vec::new(),
+            
+            // image cache
             image_cache: std::collections::HashMap::new(),
             
             window,
@@ -87,6 +99,7 @@ impl App {
                 history: vec![initial_url.to_string()],
                 history_index: 0,
                 scroll_y: 0,
+                favicon: None,
             }],
             active_tab: 0,
         };
@@ -175,6 +188,7 @@ impl App {
                 history: vec!["src/main.html".to_string()],
                 history_index: 0,
                 scroll_y: 0,
+                favicon: None,
             };
             self.active_tab = 0;
             self.load_current_url();
@@ -314,6 +328,18 @@ impl App {
                 self.current_tab_mut().document =
                     Document::from_message(format!("Could not load {}\n\n{}", current_url, error));
             }
+        }
+    }
+
+    pub fn add_bookmark(&mut self) {
+        let url = self.current_tab().current_url.clone();
+
+        if !self.bookmarks.contains(&url) {
+            self.bookmarks.push(url.clone());
+
+            println!("Bookmarked: {}", url);
+        }else {
+            println!("Already bookmarked")
         }
     }
 }
