@@ -38,6 +38,8 @@ pub enum Element {
     },
 
     HorizontalRule,
+
+    TableRow(Vec<String>),
 }
 
 impl Document {
@@ -92,6 +94,25 @@ fn collect_elements(handle: &Handle, elements: &mut Vec<Element>) {
                     }
                 }
                 "hr" => elements.push(Element::HorizontalRule),
+                "tr" => {
+                    let mut cells = Vec::new();
+
+                    for child in handle.children.borrow().iter() {
+                        if let NodeData::Element { name, .. } = &child.data {
+                            let child_tag = name.local.as_ref();
+
+                            if child_tag == "td" || child_tag == "th" {
+                                let text = clean_text(&collect_text(child));
+
+                                cells.push(text);
+                            }
+                        }
+                    }
+
+                    if !cells.is_empty() {
+                        elements.push(Element::TableRow(cells));
+                    }
+                }
                 _ => {}
             }
         }

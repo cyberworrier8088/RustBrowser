@@ -312,6 +312,19 @@ fn draw_document(
                 draw_horizontal_line(frame, y);
                 y += 20;
             }
+            Element::TableRow(cells) => {
+                let mut cell_x = CONTENT_LEFT;
+
+                for cell in cells {
+                    draw_wrapped_text(
+                        frame, cell, cell_x, y, 1, [0, 0, 0, 255], false,
+                    );
+
+                    cell_x += 160;
+                }
+
+                y += 24;
+            }
         }
     }
 }
