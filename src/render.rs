@@ -7,7 +7,7 @@
 
 
 // import modules from other files
-use crate::dom::{Document, Element};
+use crate::dom::Document;
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
 use crate::net::fetch_image;
@@ -186,146 +186,186 @@ fn draw_document(
 ) {
     let mut y = CONTENT_TOP + scroll_y;
 
-    for element in &document.elements() {
-        match element {
-            Element::Heading { level, text } => {
-                let scale = match level {
-                    1 => 3,
-                    2 => 2,
-                    3 => 2,
-                    4 => 1,
-                    5 => 1,
-                    _ => 1,
-                };
-                y = draw_wrapped_text(
-                    frame,
-                    text,
-                    CONTENT_LEFT,
-                    y,
-                    scale,
-                    [0, 0, 0, 255],
-                    false,
-                );
-                y += 12;
-            }
-            Element::Paragraph(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [0, 0, 0, 255], false);
-                y += 12;
-            }
-            Element::Link { text, url } => {
-                let start_y = y;
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [95, 170, 255, 255], false);
-                let height = (y - start_y).max(10);
+    // dom renderer: render directly from node tree
+    if let Some(root) = &document.root {
+        render_node(root, frame, cache, links, &mut y);
+    }
+}
+
+// dom renderer: renders directly from the node tree
+
+fn render_node(
+    node: &crate::dom::Node,
+    frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    links: &mut Vec<LinkBox>,
+    y: &mut i32,
+) {
+    match node.tag.as_str() {
+        // headings
+        "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
+            let scale = match node.tag.as_str() {
+                "h1" => 3,
+                "h2" | "h3" => 2,
+                _ => 1,
+            };
+            let text = collect_render_text(node);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, scale, [0, 0, 0, 255], false);
+            *y += 12;
+        }
+
+        // paragraphs
+        "p" => {
+            let text = collect_render_text(node);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false);
+            *y += 12;
+        }
+
+        // message (used by Document::from_message for error pages)
+        "message" => {
+            *y = draw_wrapped_text(frame, &node.text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false);
+            *y += 12;
+        }
+
+        // links
+        "a" => {
+            let text = collect_render_text(node);
+            let href = node.attributes.iter()
+                .find(|(k, _)| k == "href")
+                .map(|(_, v)| v.clone())
+                .unwrap_or_default();
+
+            if !text.is_empty() && !href.is_empty() {
+                let start_y = *y;
+                *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [95, 170, 255, 255], false);
+                let height = (*y - start_y).max(10);
 
                 links.push(LinkBox {
                     text: text.clone(),
-                    url: url.clone(),
+                    url: href,
                     x: CONTENT_LEFT,
                     y: start_y,
                     width: (text.len() as i32 * 8).min(WIDTH as i32 - CONTENT_LEFT * 2),
                     height,
                 });
 
-                y += 12;
-            }
-            Element::ListIteam(text) => {
-                y = draw_wrapped_text(
-                    frame,
-                    &format!("* {}", text),
-                    CONTENT_LEFT + 20,
-                    y,
-                    1,
-                    [0, 0, 0, 255],
-                    false,
-                );
-                y += 8;
-            }
-            Element::Bold(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 2, [0, 0, 0, 255], false);
-                y += 12;
-            }
-            Element::Italic(text) => {
-                y = draw_wrapped_text(frame, text, CONTENT_LEFT, y, 1, [0, 0, 0, 255], true);
-                y += 12;
-            }
-            Element::Image { src, alt } => {
-                let is_network =
-                    src.starts_with("http://")
-                    || src.starts_with("https://");
-
-                if is_network {
-                    if let Some(height) =
-                        draw_network_image(frame, cache, src, CONTENT_LEFT, y)
-                    {
-                        y += height + 12;
-                        continue;
-                    }
-                } else {
-                    if let Some(height) =
-                        draw_local_image(frame, src, CONTENT_LEFT, y)
-                    {
-                        y += height + 12;
-                        continue;
-                    }
-                }
-
-                let box_width = 220;
-                let box_height = 80;
-                fill_rect(
-                    frame,
-                    CONTENT_LEFT,
-                    y,
-                    box_width,
-                    box_height,
-                    [45, 50, 60, 255],
-                );
-                draw_text_line_raw(
-                    frame,
-                    "[ IMAGE ]",
-                    CONTENT_LEFT + 10,
-                    y + 10,
-                    1,
-                    [255, 255, 255, 255],
-                );
-                draw_text_line_raw(
-                    frame,
-                    &format!("src: {}", src),
-                    CONTENT_LEFT + 10,
-                    y + 30,
-                    1,
-                    [180, 180, 180, 255],
-                );
-                if !alt.is_empty() {
-                    draw_text_line_raw(
-                        frame,
-                        alt,
-                        CONTENT_LEFT + 10,
-                        y + 50,
-                        1,
-                        [220, 220, 220, 255],
-                    );
-                }
-                y += box_height + 12;
-            }
-
-            Element::HorizontalRule => {
-                draw_horizontal_line(frame, y);
-                y += 20;
-            }
-            Element::TableRow(cells) => {
-                let mut cell_x = CONTENT_LEFT;
-
-                for cell in cells {
-                    draw_wrapped_text(
-                        frame, cell, cell_x, y, 1, [0, 0, 0, 255], false,
-                    );
-
-                    cell_x += 160;
-                }
-
-                y += 24;
+                *y += 12;
             }
         }
+
+        // list items
+        "li" => {
+            let text = collect_render_text(node);
+            *y = draw_wrapped_text(
+                frame,
+                &format!("* {}", text),
+                CONTENT_LEFT + 20,
+                *y,
+                1,
+                [0, 0, 0, 255],
+                false,
+            );
+            *y += 8;
+        }
+
+        // bold
+        "b" | "strong" => {
+            let text = collect_render_text(node);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 2, [0, 0, 0, 255], false);
+            *y += 12;
+        }
+
+        // italic
+        "i" | "em" => {
+            let text = collect_render_text(node);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], true);
+            *y += 12;
+        }
+
+        // images
+        "img" => {
+            let src = node.attributes.iter()
+                .find(|(k, _)| k == "src")
+                .map(|(_, v)| v.clone())
+                .unwrap_or_default();
+            let alt = node.attributes.iter()
+                .find(|(k, _)| k == "alt")
+                .map(|(_, v)| v.clone())
+                .unwrap_or_default();
+
+            let is_network = src.starts_with("http://") || src.starts_with("https://");
+
+            if is_network {
+                if let Some(height) = draw_network_image(frame, cache, &src, CONTENT_LEFT, *y) {
+                    *y += height + 12;
+                    return;
+                }
+            } else if !src.is_empty() {
+                if let Some(height) = draw_local_image(frame, &src, CONTENT_LEFT, *y) {
+                    *y += height + 12;
+                    return;
+                }
+            }
+
+            // fallback placeholder
+            let box_width = 220;
+            let box_height = 80;
+            fill_rect(frame, CONTENT_LEFT, *y, box_width, box_height, [45, 50, 60, 255]);
+            draw_text_line_raw(frame, "[ IMAGE ]", CONTENT_LEFT + 10, *y + 10, 1, [255, 255, 255, 255]);
+            draw_text_line_raw(frame, &format!("src: {}", src), CONTENT_LEFT + 10, *y + 30, 1, [180, 180, 180, 255]);
+            if !alt.is_empty() {
+                draw_text_line_raw(frame, &alt, CONTENT_LEFT + 10, *y + 50, 1, [220, 220, 220, 255]);
+            }
+            *y += box_height + 12;
+        }
+
+        // horizontal rule
+        "hr" => {
+            draw_horizontal_line(frame, *y);
+            *y += 20;
+        }
+
+        // table rows
+        "tr" => {
+            let mut cell_x = CONTENT_LEFT;
+            for child in &node.children {
+                if child.tag == "td" || child.tag == "th" {
+                    let cell_text = collect_render_text(child);
+                    draw_wrapped_text(frame, &cell_text, cell_x, *y, 1, [0, 0, 0, 255], false);
+                    cell_x += 160;
+                }
+            }
+            *y += 24;
+        }
+
+        // all other tags: just recurse into children
+        _ => {
+            for child in &node.children {
+                render_node(child, frame, cache, links, y);
+            }
+        }
+    }
+}
+
+// collect all descendant text from a node tree
+// gathers content from "#text" nodes, preserving spaces between words
+fn collect_render_text(node: &crate::dom::Node) -> String {
+    let mut result = String::new();
+    collect_render_text_recursive(node, &mut result);
+    // collapse whitespace runs into single spaces and trim
+    result.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn collect_render_text_recursive(node: &crate::dom::Node, output: &mut String) {
+    if node.tag == "#text" {
+        output.push_str(&node.text);
+        output.push(' ');
+    }
+    if node.tag == "br" {
+        output.push('\n');
+    }
+    for child in &node.children {
+        collect_render_text_recursive(child, output);
     }
 }
 
@@ -626,6 +666,9 @@ fn draw_horizontal_line(frame: &mut [u8], y: i32) {
         set_pixel(frame, x, y, [200, 200, 200, 255]);
     }
 }
+
+
+
 
 /////////////////////////
 // End of file
