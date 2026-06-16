@@ -78,7 +78,7 @@ fn draw_address_bar(
     typing_url: &str,
     typing: bool,
 ) {
-    // 1. Address/Tab Bar Background
+    // 1. dddress/Tab Bar Background
     fill_rect(
         frame,
         0,
@@ -88,7 +88,7 @@ fn draw_address_bar(
         [32, 35, 42, 255],
     );
 
-    // 2. Draw Tabs
+    // 2. draw Tabs
     let mut tab_x = 10;
     for (i, url) in tab_urls.iter().enumerate() {
         let is_active = i == active_tab;
@@ -123,7 +123,7 @@ fn draw_address_bar(
             [255, 255, 255, 255],
         );
 
-        // Close button 'x' on the right of the tab
+        // close button 'x' on the right of the tab
         draw_text_line_raw(
             frame,
             "x",
@@ -136,7 +136,7 @@ fn draw_address_bar(
         tab_x += TAB_WIDTH + 8;
     }
 
-    // Draw '+' new tab button
+    // draw '+' new tab button
     fill_rect(
         frame,
         tab_x,
@@ -154,7 +154,7 @@ fn draw_address_bar(
         [255, 255, 255, 255],
     );
 
-    // 3. Address bar input field (white if active/typing, off-white if not)
+    // 3. address bar input field white if active/typing, off-white if not
     let input_bg = if typing {
         [255, 255, 255, 255]
     } else {
@@ -162,7 +162,7 @@ fn draw_address_bar(
     };
     fill_rect(frame, 8, 36, WIDTH as i32 - 16, 26, input_bg);
 
-    // Separator line after reload button 'R'
+    // separator line after reload button 'R'
     fill_rect(frame, 78, 36, 1, 26, [200, 200, 205, 255]);
 
     let label = if typing {
@@ -186,7 +186,7 @@ fn draw_document(
 ) {
     let mut y = CONTENT_TOP + scroll_y;
 
-    for element in &document.elements {
+    for element in &document.elements() {
         match element {
             Element::Heading { level, text } => {
                 let scale = match level {

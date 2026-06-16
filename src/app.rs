@@ -7,7 +7,7 @@
 
 // import modules from other files
 use crate::{
-    dom::{Document, parse_html},
+    dom::{Document, Node, parse_html},
     net::fetch_page,
     render::{LinkBox, draw_page},
 };
@@ -233,7 +233,7 @@ impl App {
             }
         }
 
-        // 2. Check address bar input & buttons clicks (y in 36..62)
+        // 2. check address bar input & buttons clicks (y in 36..62) :)
         if self.mouse_y >= 36 && self.mouse_y <= 62 {
             if self.mouse_x >= 8 && self.mouse_x < 28 {
                 println!("GUI: Back clicked");
@@ -259,7 +259,7 @@ impl App {
             return;
         }
 
-        // 3. Check document link clicks
+        //  check document link clicks
         if let Some(url) = self
             .links
             .iter()
@@ -313,13 +313,11 @@ impl App {
                 println!("Downloaded {} bytes. Parsing HTML...", html.len());
                 let mut document = parse_html(&html);
                 
-                for element in &mut document.elements {
-                    if let crate::dom::Element::Image { src, .. } = element {
-                        *src = resolve_url(&current_url, src);
-                        println!(">> RESOLVED IMAGE SRC: {}", src);
-                    }
+                // resolve image URLs in the Node tree directly
+                if let Some(ref mut root) = document.root {
+                    resolve_image_urls_in_tree(root, &current_url);
                 }
-                // Store the final result
+                // store the final result
                 let tab = self.current_tab_mut();
                 tab.document = document;
                 tab.scroll_y = 0;
@@ -372,6 +370,20 @@ pub fn resolve_url(base_url: &str, url: &str) -> String {
     match reqwest::Url::parse(base_url).and_then(|base| base.join(url)) {
         Ok(url) => url.to_string(),
         Err(_) => normalize_url(url),
+    }
+}
+
+// walk the Node tree and resolve relative image src URLs
+fn resolve_image_urls_in_tree(node: &mut Node, base_url: &str) {
+    if node.tag == "img" {
+        if let Some((_, src)) = node.attributes.iter_mut().find(|(k, _)| k == "src") {
+            let resolved = resolve_url(base_url, src);
+            println!(">> RESOLVED IMAGE SRC: {}", resolved);
+            *src = resolved;
+        }
+    }
+    for child in &mut node.children {
+        resolve_image_urls_in_tree(child, base_url);
     }
 }
 
