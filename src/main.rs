@@ -49,7 +49,7 @@ fn main() {
         Pixels::new(WIDTH, HEIGHT, surface).unwrap()
     };
 
-    let mut app = App::new(window, pixels, "https://example.com");
+    let mut app = App::new(window, pixels, "https://google.com");
 
     app.new_tab(r"src/main.html");
 

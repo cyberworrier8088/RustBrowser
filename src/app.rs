@@ -344,12 +344,23 @@ impl App {
     }
 }
 
-fn normalize_url(url: &str) -> String {
-    if url.starts_with("http://") || url.starts_with("https://") {
-        url.to_string()
-    } else {
-        format!("https://{url}")
+fn normalize_url(input: &str) -> String {
+    let input = input.trim();
+
+    if input.starts_with("http://") || input.starts_with("https://") {
+        return input.to_string();
     }
+
+    // looks like a domain
+    if input.contains('.') && !input.contains(' ') {
+        return format!("https://{}", input);
+    }
+
+    // otherwise, use google search
+    let query = input.replace(' ', "+");
+
+    format!("https://www.google.com/search?q={}", query)
+
 }
 
 // func for user URL in the page correcting to go

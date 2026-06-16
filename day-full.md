@@ -34,11 +34,15 @@ this project taught me much more than just browser developemnt. learneed how to:
 * git skill improved
 * problem solving
 * and many more...
+* added google search
 
 this browser is not meant to compete with chrome or firefox or servo. it was build for learning. through this project, i improved my rust skills and gained a much deeper undestanding of how browsers work internally.
 there is still a long way to go. In the future, i want to add better HTML support, CSS, forms, improved layout, and more advanced rendering techniques.
 most importantly, this project taught me that even very complicated software can be understood if you break it down into small steps and keep learning every day. What once looked impossible became manageable, one feature at a time.
 
 
-demo:
- 
+demo come finaly:
+see you soon
+
+learnining and reserch time 7+ hours
+most consumed my time read and learning this [Browser Engineering](https://browser.engineering/)
