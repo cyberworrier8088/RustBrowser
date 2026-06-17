@@ -30,6 +30,14 @@ pub struct LinkBox {
     pub height: i32,
 }
 
+pub struct TextBox {
+    pub text: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
 impl LinkBox {
     pub fn contains(&self, x: i32, y: i32) -> bool {
         x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
@@ -58,16 +66,33 @@ pub fn draw_page(
     active_tab: usize,
     document: &Document,
     links: &mut Vec<LinkBox>,
+    text_boxes: &mut Vec<TextBox>,
     current_url: &str,
     typing_url: &str,
     typing: bool,
     scroll_y: i32,
+    selecting: bool,
+    selection_start: (i32, i32),
+    selection_end: (i32, i32),
 ) {
     clear(frame, [255, 255, 255, 255]);
     links.clear();
 
     draw_address_bar(frame, tab_urls, active_tab, current_url, typing_url, typing);
-    draw_document(frame, cache, document, links, scroll_y);
+    draw_document(frame, cache, document, links, text_boxes, scroll_y);
+
+    // draw selection highlight rectangle if selecting is active
+    if selecting {
+        let x1 = selection_start.0.min(selection_end.0);
+        let y1 = selection_start.1.min(selection_end.1);
+        let x2 = selection_start.0.max(selection_end.0);
+        let y2 = selection_start.1.max(selection_end.1);
+
+        let width = x2 - x1;
+        let height = y2 - y1;
+
+        blend_rect(frame, x1, y1, width, height, [100, 149, 237, 80]); // Cornflower blue with alpha 80
+    }
 }
 
 fn draw_address_bar(
@@ -78,7 +103,7 @@ fn draw_address_bar(
     typing_url: &str,
     typing: bool,
 ) {
-    // 1. dddress/Tab Bar Background
+    // adddress/Tab Bar Background
     fill_rect(
         frame,
         0,
@@ -88,7 +113,7 @@ fn draw_address_bar(
         [32, 35, 42, 255],
     );
 
-    // 2. draw Tabs
+    // draw Tabs
     let mut tab_x = 10;
     for (i, url) in tab_urls.iter().enumerate() {
         let is_active = i == active_tab;
@@ -182,13 +207,14 @@ fn draw_document(
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     document: &Document,
     links: &mut Vec<LinkBox>,
+    text_boxes: &mut Vec<TextBox>,
     scroll_y: i32,
 ) {
     let mut y = CONTENT_TOP + scroll_y;
 
     // dom renderer: render directly from node tree
     if let Some(root) = &document.root {
-        render_node(root, frame, cache, links, &mut y);
+        render_node(root, frame, cache, links, text_boxes, &mut y);
     }
 }
 
@@ -199,6 +225,7 @@ fn render_node(
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     links: &mut Vec<LinkBox>,
+    text_boxes: &mut Vec<TextBox>,
     y: &mut i32,
 ) {
     match node.tag.as_str() {
@@ -210,20 +237,20 @@ fn render_node(
                 _ => 1,
             };
             let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, scale, [0, 0, 0, 255], false);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, scale, [0, 0, 0, 255], false, text_boxes);
             *y += 12;
         }
 
         // paragraphs
         "p" => {
             let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false, text_boxes);
             *y += 12;
         }
 
         // message (used by Document::from_message for error pages)
         "message" => {
-            *y = draw_wrapped_text(frame, &node.text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false);
+            *y = draw_wrapped_text(frame, &node.text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false, text_boxes);
             *y += 12;
         }
 
@@ -237,7 +264,7 @@ fn render_node(
 
             if !text.is_empty() && !href.is_empty() {
                 let start_y = *y;
-                *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [95, 170, 255, 255], false);
+                *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [95, 170, 255, 255], false, text_boxes);
                 let height = (*y - start_y).max(10);
 
                 links.push(LinkBox {
@@ -264,6 +291,7 @@ fn render_node(
                 1,
                 [0, 0, 0, 255],
                 false,
+                text_boxes,
             );
             *y += 8;
         }
@@ -271,14 +299,14 @@ fn render_node(
         // bold
         "b" | "strong" => {
             let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 2, [0, 0, 0, 255], false);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 2, [0, 0, 0, 255], false, text_boxes);
             *y += 12;
         }
 
         // italic
         "i" | "em" => {
             let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], true);
+            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], true, text_boxes);
             *y += 12;
         }
 
@@ -331,7 +359,7 @@ fn render_node(
             for child in &node.children {
                 if child.tag == "td" || child.tag == "th" {
                     let cell_text = collect_render_text(child);
-                    draw_wrapped_text(frame, &cell_text, cell_x, *y, 1, [0, 0, 0, 255], false);
+                    draw_wrapped_text(frame, &cell_text, cell_x, *y, 1, [0, 0, 0, 255], false, text_boxes);
                     cell_x += 160;
                 }
             }
@@ -343,7 +371,7 @@ fn render_node(
             *y += 4;
 
             for child in &node.children {
-                render_node(child, frame, cache, links, y);
+                render_node(child, frame, cache, links, text_boxes, y);
             }
 
             *y += 4;
@@ -352,7 +380,7 @@ fn render_node(
         // span tag
         "span" => {
             for child in &node.children {
-                render_node(child, frame, cache, links, y);
+                render_node(child, frame, cache, links, text_boxes, y);
             }
         }
 
@@ -368,6 +396,7 @@ fn render_node(
                     1,
                     [0, 0, 0, 255],
                     false,
+                    text_boxes,
                 );
 
                 *y += 4;
@@ -377,7 +406,7 @@ fn render_node(
         // all other tags: just recurse into children
         _ => {
             for child in &node.children {
-                render_node(child, frame, cache, links, y);
+                render_node(child, frame, cache, links, text_boxes, y);
             }
         }
     }
@@ -413,6 +442,7 @@ fn draw_wrapped_text(
     scale: i32,
     color: [u8; 4],
     italic: bool, // new
+    text_boxes: &mut Vec<TextBox>,
 ) -> i32 {
     let char_width = 8 * scale;
     let line_height = 12 * scale;
@@ -429,6 +459,14 @@ fn draw_wrapped_text(
                 x = start_x;
                 y += line_height;
             }
+
+            text_boxes.push(TextBox {
+                text: word.to_string(),
+                x,
+                y,
+                width: word_width,
+                height: line_height,
+            });
 
             for ch in word.chars() {
                 if italic {
@@ -504,6 +542,28 @@ fn draw_scaled_pixel_raw(frame: &mut [u8], x: i32, y: i32, scale: i32, color: [u
     for offset_y in 0..scale {
         for offset_x in 0..scale {
             set_raw_pixel(frame, x + offset_x, y + offset_y, color);
+        }
+    }
+}
+
+fn blend_pixel(frame: &mut [u8], x: i32, y: i32, color: [u8; 4]) {
+    if x < 0 || y < ADDRESS_BAR_HEIGHT || x >= WIDTH as i32 || y >= HEIGHT as i32 {
+        return;
+    }
+
+    let idx = (y as usize * WIDTH as usize + x as usize) * 4;
+    let alpha = color[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    frame[idx] = (color[0] as f32 * alpha + frame[idx] as f32 * inv_alpha) as u8;
+    frame[idx + 1] = (color[1] as f32 * alpha + frame[idx + 1] as f32 * inv_alpha) as u8;
+    frame[idx + 2] = (color[2] as f32 * alpha + frame[idx + 2] as f32 * inv_alpha) as u8;
+}
+
+fn blend_rect(frame: &mut [u8], x: i32, y: i32, width: i32, height: i32, color: [u8; 4]) {
+    for py in y..y + height {
+        for px in x..x + width {
+            blend_pixel(frame, px, py, color);
         }
     }
 }

@@ -66,13 +66,29 @@ fn main() {
                     WindowEvent::CursorMoved { position, .. } => {
                         app.mouse_x = position.x as i32;
                         app.mouse_y = position.y as i32;
+                        if app.selecting {
+                            app.selection_end = (app.mouse_x, app.mouse_y);
+                        }
                     }
                     WindowEvent::MouseInput {
-                        state: ElementState::Pressed,
+                        state,
                         button: MouseButton::Left,
                         ..
                     } => {
-                        app.click_link();
+                        if state == ElementState::Pressed {
+                            app.selecting = true;
+                            app.selection_start = (app.mouse_x, app.mouse_y);
+                            app.selection_end = (app.mouse_x, app.mouse_y);
+                        } else if state == ElementState::Released {
+                            if app.selecting {
+                                app.selecting = false;
+                                let dx = (app.selection_start.0 - app.selection_end.0).abs();
+                                let dy = (app.selection_start.1 - app.selection_end.1).abs();
+                                if dx < 5 && dy < 5 {
+                                    app.click_link();
+                                }
+                            }
+                        }
                     }
                     WindowEvent::MouseWheel { delta, .. } => {
                         app.scroll(delta);

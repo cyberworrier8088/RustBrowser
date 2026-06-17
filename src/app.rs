@@ -9,7 +9,7 @@
 use crate::{
     dom::{Document, Node, parse_html},
     net::fetch_page,
-    render::{LinkBox, draw_page},
+    render::{LinkBox, TextBox, draw_page},
 };
 
 // useing libraries
@@ -44,6 +44,15 @@ pub struct App {
 
     // book marks
     pub bookmarks: Vec<String>,
+
+    pub text_boxes: Vec<TextBox>,
+
+    // select text
+    pub selecting: bool,
+    pub selection_start: (i32, i32),
+    pub selection_end: (i32, i32),
+    pub selected_text: String,
+    pub ctrl_pressed: bool,
 }
 
 // this is implementation of app struct
@@ -102,6 +111,12 @@ impl App {
                 favicon: None,
             }],
             active_tab: 0,
+            text_boxes: Vec::new(),
+            selecting: false,
+            selection_start: (0, 0),
+            selection_end: (0, 0),
+            selected_text: String::new(),
+            ctrl_pressed: false,
         };
 
         app.load_current_url();
@@ -109,6 +124,7 @@ impl App {
     }
 
     pub fn draw(&mut self) {
+        self.text_boxes.clear();
         let active = self.active_tab;
         let document = &self.tabs[active].document;
         let current_url = &self.tabs[active].current_url;
@@ -124,10 +140,14 @@ impl App {
             self.active_tab,
             document,
             &mut self.links,
+            &mut self.text_boxes,
             current_url,
             &self.typing_url,
             self.typing,
             scroll_y,
+            self.selecting,
+            self.selection_start,
+            self.selection_end,
         );
         self.pixels.render().unwrap();
     }
@@ -339,6 +359,43 @@ impl App {
         }else {
             println!("Already bookmarked")
         }
+    }
+
+    pub fn update_selection(&mut self) {
+        let x1 = self.selection_start.0.min(self.selection_end.0);
+        let y1 = self.selection_start.1.min(self.selection_end.1);
+        let x2 = self.selection_start.0.max(self.selection_end.0);
+        let y2 = self.selection_start.1.max(self.selection_end.1);
+
+        let mut selected_boxes: Vec<&TextBox> = self.text_boxes.iter()
+            .filter(|tb| {
+                let tb_x2 = tb.x + tb.width;
+                let tb_y2 = tb.y + tb.height;
+                tb.x < x2 && tb_x2 > x1 && tb.y < y2 && tb_y2 > y1
+            })
+            .collect();
+
+        selected_boxes.sort_by(|a, b| {
+            if a.y == b.y {
+                a.x.cmp(&b.x)
+            } else {
+                a.y.cmp(&b.y)
+            }
+        });
+
+        let mut words = Vec::new();
+        let mut last_y = -1;
+        for tb in selected_boxes {
+            if last_y != -1 && tb.y != last_y {
+                words.push("\n".to_string());
+            } else if !words.is_empty() && words.last() != Some(&"\n".to_string()) {
+                words.push(" ".to_string());
+            }
+            words.push(tb.text.clone());
+            last_y = tb.y;
+        }
+
+        self.selected_text = words.concat();
     }
 }
 
