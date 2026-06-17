@@ -49,6 +49,7 @@ pub struct App {
 
     // select text
     pub selecting: bool,
+    pub selection_active: bool,
     pub selection_start: (i32, i32),
     pub selection_end: (i32, i32),
     pub selected_text: String,
@@ -113,6 +114,7 @@ impl App {
             active_tab: 0,
             text_boxes: Vec::new(),
             selecting: false,
+            selection_active: false,
             selection_start: (0, 0),
             selection_end: (0, 0),
             selected_text: String::new(),
@@ -145,7 +147,7 @@ impl App {
             &self.typing_url,
             self.typing,
             scroll_y,
-            self.selecting,
+            self.selecting || self.selection_active,
             self.selection_start,
             self.selection_end,
         );
@@ -318,6 +320,7 @@ impl App {
     }
 
     fn load_current_url(&mut self) {
+        self.clear_selection();
         let current_url = self.current_tab().current_url.clone();
 
         println!("Downloading {}...", current_url);
@@ -361,6 +364,34 @@ impl App {
         }
     }
 
+    pub fn clear_selection(&mut self) {
+        self.selecting = false;
+        self.selection_active = false;
+        self.selected_text.clear();
+    }
+
+    pub fn copy_selection_to_clipboard(&mut self) {
+        if self.selected_text.is_empty() {
+            return;
+        }
+        match arboard::Clipboard::new() {
+            Ok(mut clipboard) => {
+                match clipboard.set_text(self.selected_text.clone()) {
+                    Ok(_) => {
+                        println!("Copied To Clipboard");
+                        println!("Copied: {}", self.selected_text);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to copy to clipboard: {:?}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to initialize clipboard: {:?}", e);
+            }
+        }
+    }
+
     pub fn update_selection(&mut self) {
         let x1 = self.selection_start.0.min(self.selection_end.0);
         let y1 = self.selection_start.1.min(self.selection_end.1);
@@ -375,24 +406,40 @@ impl App {
             })
             .collect();
 
-        selected_boxes.sort_by(|a, b| {
-            if a.y == b.y {
-                a.x.cmp(&b.x)
-            } else {
-                a.y.cmp(&b.y)
-            }
-        });
+        // Sort by y first to establish a baseline line-ordering
+        selected_boxes.sort_by_key(|tb| tb.y);
 
-        let mut words = Vec::new();
-        let mut last_y = -1;
+        // Group text boxes into lines by checking vertical overlap/proximity
+        let mut lines: Vec<Vec<&TextBox>> = Vec::new();
         for tb in selected_boxes {
-            if last_y != -1 && tb.y != last_y {
-                words.push("\n".to_string());
-            } else if !words.is_empty() && words.last() != Some(&"\n".to_string()) {
-                words.push(" ".to_string());
+            if let Some(last_line) = lines.last_mut() {
+                let first = last_line[0];
+                let overlap = tb.y.max(first.y) < (tb.y + tb.height).min(first.y + first.height);
+                if overlap || (tb.y - first.y).abs() < 5 {
+                    last_line.push(tb);
+                    continue;
+                }
             }
-            words.push(tb.text.clone());
-            last_y = tb.y;
+            lines.push(vec![tb]);
+        }
+
+        // Sort each grouped line by x coordinates to preserve reading order
+        for line in &mut lines {
+            line.sort_by_key(|tb| tb.x);
+        }
+
+        // Combine the words
+        let mut words = Vec::new();
+        for (i, line) in lines.iter().enumerate() {
+            if i > 0 {
+                words.push("\n".to_string());
+            }
+            for (j, tb) in line.iter().enumerate() {
+                if j > 0 {
+                    words.push(" ".to_string());
+                }
+                words.push(tb.text.clone());
+            }
         }
 
         self.selected_text = words.concat();

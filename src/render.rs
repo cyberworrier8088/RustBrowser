@@ -16,7 +16,7 @@ pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
 
 const TAB_BAR_HEIGHT: i32 = 28;
-const ADDRESS_BAR_HEIGHT: i32 = 72;
+pub const ADDRESS_BAR_HEIGHT: i32 = 72;
 const CONTENT_LEFT: i32 = 10;
 const CONTENT_TOP: i32 = 84;
 const TAB_WIDTH: i32 = 140;
@@ -82,7 +82,7 @@ pub fn draw_page(
     draw_document(frame, cache, document, links, text_boxes, scroll_y);
 
     // draw selection highlight rectangle if selecting is active
-    if selecting {
+    if selecting && selection_start.1 >= ADDRESS_BAR_HEIGHT {
         let x1 = selection_start.0.min(selection_end.0);
         let y1 = selection_start.1.min(selection_end.1);
         let x2 = selection_start.0.max(selection_end.0);
