@@ -693,7 +693,7 @@ fn draw_network_image(
     // try cache first
 
     if let Some(rgba) = cache.get(url) {
-        println!("Cache HIT: {}", url);
+        //println!("Cache HIT: {}", url);
         let width = rgba.width();
         
         let height = rgba.height();

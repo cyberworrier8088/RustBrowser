@@ -8,6 +8,7 @@
 // import modules from other files
 use crate::{
     dom::{Document, Node, parse_html},
+    downloads::download_file,
     net::fetch_page,
     render::{LinkBox, TextBox, draw_page},
 };
@@ -291,7 +292,20 @@ impl App {
                 resolve_url(&self.current_tab().current_url, &link.url)
             })
         {
-            self.visit(url);
+            if is_downloadable(&url) {
+                match download_file(&url) {
+                    Ok(_) => {
+                        println!("Downloaded Complete");
+                    }
+
+                    Err(e) => {
+                        println!("Download Failed: {}", e)
+                    }
+                }
+                
+            } else {
+                self.visit(url);
+            }
         }
     }
 
@@ -446,7 +460,18 @@ impl App {
     }
 }
 
+fn is_downloadable(url: &str) -> bool {
+    let lower = url.to_lowercase();
+
+    lower.ends_with(".zip") || lower.ends_with(".pdf") ||
+    lower.ends_with(".png") || lower.ends_with(".jpg") ||
+    lower.ends_with(".jpeg")
+}
+
 fn normalize_url(input: &str) -> String {
+
+
+
     let input = input.trim();
 
     if input.starts_with("http://") || input.starts_with("https://") {
