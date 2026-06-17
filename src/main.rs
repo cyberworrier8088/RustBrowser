@@ -13,6 +13,7 @@
 // import modules from other files
 mod app;
 mod dom;
+mod downloads;
 mod net;
 mod render;
 
@@ -33,6 +34,10 @@ use winit::{
 
 //  main function
 fn main() {
+    crate::downloads::download_file(
+    "https://www.rust-lang.org/logos/rust-logo-512x512.png"
+    ).unwrap();
+    
     println!("Creating EventLoop...");
     let event_loop = EventLoop::new().unwrap();
 
