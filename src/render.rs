@@ -338,6 +338,42 @@ fn render_node(
             *y += 24;
         }
 
+        // div tag
+        "div" => {
+            *y += 4;
+
+            for child in &node.children {
+                render_node(child, frame, cache, links, y);
+            }
+
+            *y += 4;
+        }
+
+        // span tag
+        "span" => {
+            for child in &node.children {
+                render_node(child, frame, cache, links, y);
+            }
+        }
+
+        "#text" => {
+            let text = node.text.trim();
+
+            if !text.is_empty() {
+                *y = draw_wrapped_text(
+                    frame,
+                    text,
+                    CONTENT_LEFT,
+                    *y,
+                    1,
+                    [0, 0, 0, 255],
+                    false,
+                );
+
+                *y += 4;
+            }
+        }
+
         // all other tags: just recurse into children
         _ => {
             for child in &node.children {
