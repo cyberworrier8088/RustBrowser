@@ -28,6 +28,7 @@ pub struct Document {
 pub struct Node {
     pub tag: String,
     pub text: String,
+    pub style: Option<String>,
     pub attributes: Vec<(String, String)>,
     pub children: Vec<Node>,
 }
@@ -40,6 +41,7 @@ impl Document {
             root: Some(Node {
                 tag: "message".to_string(),
                 text: message,
+                style: None,
                 attributes: Vec::new(),
                 children: Vec::new(),
             })
@@ -65,6 +67,7 @@ fn build_node(handle: &Handle) -> Node {
         text: String::new(),
         attributes: Vec::new(),
         children: Vec::new(),
+        style: None,
     };
 
     match &handle.data {
@@ -75,6 +78,9 @@ fn build_node(handle: &Handle) -> Node {
                     attr.name.local.to_string(),
                     attr.value.to_string(),
                 ));
+                if attr.name.local.to_string() == "style" {
+                    node.style = Some(attr.value.to_string());
+                }
             }
         }
 

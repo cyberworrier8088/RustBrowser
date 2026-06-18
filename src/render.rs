@@ -11,6 +11,7 @@ use crate::dom::Document;
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
 use crate::net::fetch_image;
+use crate::css::get_text_color;
 
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
@@ -244,9 +245,19 @@ fn render_node(
         // paragraphs
         "p" => {
             let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false, text_boxes);
-            *y += 12;
-        }
+            let color = get_text_color(&node.style);
+            *y = draw_wrapped_text(
+                frame,
+                &text,
+                CONTENT_LEFT,
+                *y,
+                1,
+                color,
+                false,
+                text_boxes,
+            );
+            *y += 12;  // add 12px margin after each paragraph
+            }
 
         // message (used by Document::from_message for error pages)
         "message" => {

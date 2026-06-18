@@ -12,6 +12,7 @@
 
 // import modules from other files
 mod app;
+mod css;
 mod dom;
 mod downloads;
 mod net;
