@@ -21,3 +21,7 @@ pub fn download_file(url: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+/////////////////////////
+// End of file
+/////////////////////////
