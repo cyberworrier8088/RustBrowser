@@ -59,6 +59,7 @@ pub fn draw_page(
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     tab_urls: &[String],
+    favicons: &[Option<image::RgbaImage>],
     active_tab: usize,
     layout_boxes: &[LayoutBox],
     links: &mut Vec<LinkBox>,
@@ -74,7 +75,7 @@ pub fn draw_page(
     clear(frame, [255, 255, 255, 255]);
     links.clear();
 
-    draw_address_bar(frame, tab_urls, active_tab, current_url, typing_url, typing);
+    draw_address_bar(frame, tab_urls, favicons, active_tab, current_url, typing_url, typing);
     draw_document(frame, cache, layout_boxes, links, text_boxes, scroll_y);
 
     // draw selection highlight rectangle if selecting is active
@@ -94,6 +95,7 @@ pub fn draw_page(
 fn draw_address_bar(
     frame: &mut [u8],
     tab_urls: &[String],
+    favicons: &[Option<image::RgbaImage>],
     active_tab: usize,
     current_url: &str,
     typing_url: &str,
@@ -128,16 +130,23 @@ fn draw_address_bar(
             title
         };
 
+        // draw favicon if present, shift title right
+        let title_x = if let Some(ref img) = favicons.get(i).and_then(|opt| opt.as_ref()) {
+            draw_favicon(frame, img, tab_x + 4, 4);
+            tab_x + 4 + 16 + 4 // icon width + gap
+        } else {
+            tab_x + 10
+        };
+
         draw_text_line_raw(
             frame,
             &truncated_title,
-            tab_x + 10,
+            title_x,
             10,
             1,
             [255, 255, 255, 255],
         );
 
-        // close button 'x' on the right of the tab
         draw_text_line_raw(
             frame,
             "x",
@@ -217,6 +226,12 @@ pub fn render_layout_box(
     text_boxes: &mut Vec<TextBox>,
     scroll_y: i32,
 ) {
+    // skip elements entirely off-screen
+    let y_pos = layout_box.y + scroll_y;
+    if y_pos + layout_box.height < ADDRESS_BAR_HEIGHT || y_pos > HEIGHT as i32 {
+        return;
+    }
+
     match layout_box.tag.as_str() {
         "h1" | "h2" | "h3" => {
             let scale = match layout_box.tag.as_str() {
@@ -857,6 +872,15 @@ fn draw_rect_outline(frame: &mut [u8], x: i32, y: i32, width: i32, height: i32, 
     for py in y..y + height {
         set_pixel(frame, x, py, color);
         set_pixel(frame, x + width - 1, py, color);
+    }
+}
+
+fn draw_favicon(frame: &mut [u8], img: &image::RgbaImage, x: i32, y: i32) {
+    for py in 0..img.height() {
+        for px in 0..img.width() {
+            let pixel = img.get_pixel(px, py);
+            set_raw_pixel(frame, x + px as i32, y + py as i32, pixel.0);
+        }
     }
 }
 

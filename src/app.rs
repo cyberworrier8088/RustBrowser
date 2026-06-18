@@ -26,7 +26,7 @@ pub struct Tab {
     pub history: Vec<String>,
     pub history_index: usize,
     pub scroll_y: i32,
-    pub favicon: Option<String>,
+    pub favicon: Option<image::RgbaImage>, 
 }
 
 // main browser struct
@@ -132,11 +132,13 @@ impl App {
         let frame = self.pixels.frame_mut();
 
         let tab_urls: Vec<String> = self.tabs.iter().map(|t| t.current_url.clone()).collect();
+        let favicons: Vec<Option<image::RgbaImage>> = self.tabs.iter().map(|t| t.favicon.clone()).collect();
 
         draw_page(
             frame,
             &mut self.image_cache,
             &tab_urls,
+            &favicons,
             self.active_tab,
             layout_boxes,
             &mut self.links,
@@ -351,12 +353,50 @@ impl App {
                 if let Some(ref mut root) = document.root {
                     resolve_image_urls_in_tree(root, &current_url);
                 }
+
+
+                // ---- Favicon ----
+                let favicon_url = if let Some(root) = &document.root {
+                    find_favicon_url(root).or_else(|| {
+                        // fallback: /favicon.ico
+                        if let Ok(parsed) = reqwest::Url::parse(&current_url) {
+                            if let Ok(base) = parsed.join("/favicon.ico") {
+                                Some(base.to_string())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    None
+                };
+
+                let favicon_image = if let Some(url) = favicon_url {
+                    match crate::net::fetch_image(&url) {
+                        Ok(bytes) => {
+                            if let Ok(img) = image::load_from_memory(&bytes) {
+                                // Resize to 16x16 (tab bar height is 24, fits well)
+                                let resized = img.resize_exact(16, 16, image::imageops::FilterType::Lanczos3);
+                                Some(resized.to_rgba8())
+                            } else {
+                                None
+                            }
+                        }
+                        Err(_) => None
+                    }
+                } else {
+                    None
+                };
                 let layout_boxes = layout_document(&document);
                 // store the final result
                 let tab = self.current_tab_mut();
                 tab.document = document;
                 tab.layout_boxes = layout_boxes;
                 tab.scroll_y = 0;
+                tab.favicon = favicon_image;
+
             }
             Err(error) => {
                 let document =
@@ -524,6 +564,32 @@ fn resolve_image_urls_in_tree(node: &mut Node, base_url: &str) {
     for child in &mut node.children {
         resolve_image_urls_in_tree(child, base_url);
     }
+}
+
+// favicon function
+fn find_favicon_url(node: &Node) -> Option<String> {
+    if node.tag == "link" {
+        let mut rel = None;
+        let mut href = None;
+        for (attr, val) in &node.attributes {
+            if attr == "rel" {
+                rel = Some(val);
+            } else if attr == "href" {
+                href = Some(val);
+            }
+        }
+        if let (Some(rel), Some(href)) = (rel, href) {
+            if rel == "icon" || rel == "shortcut icon" {
+                return Some(href.clone());
+            }
+        }
+    }
+    for child in &node.children {
+        if let Some(url) = find_favicon_url(child) {
+            return Some(url);
+        }
+    }
+    None
 }
 
 ////////////////////////

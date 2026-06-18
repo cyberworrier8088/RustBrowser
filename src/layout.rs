@@ -13,7 +13,7 @@
 // Rendering Pipeline:
 // HTML -> DOM Tree -> Layout Tree -> Renderer -> Pixels/Winit Window
 //
-// Browsers separate layout from rendering because layout answers "where and
+// browsers separate layout from rendering because layout answers "where and
 // how big?" while rendering answers "what pixels should be painted there?".
 // Keeping those jobs apart makes CSS backgrounds, margins, padding, borders,
 // images, tables, buttons, and forms much easier to grow later.
@@ -231,3 +231,8 @@ fn collect_layout_text_recursive(node: &Node, output: &mut String) {
         collect_layout_text_recursive(child, output);
     }
 }
+
+
+/////////////////////////
+// End of file
+/////////////////////////
