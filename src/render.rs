@@ -11,7 +11,7 @@ use crate::dom::Document;
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
 use crate::net::fetch_image;
-use crate::css::get_text_color;
+use crate::css::{get_text_color, get_font_size};
 
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
@@ -246,12 +246,18 @@ fn render_node(
         "p" => {
             let text = collect_render_text(node);
             let color = get_text_color(&node.style);
+            let font_size = get_font_size(&node.style);
+            let scale = match font_size {
+                0..=16 => 1,
+                17..=32 => 2,
+                _ => 3,
+            };
             *y = draw_wrapped_text(
                 frame,
                 &text,
                 CONTENT_LEFT,
                 *y,
-                1,
+                scale,
                 color,
                 false,
                 text_boxes,

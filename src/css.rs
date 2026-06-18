@@ -58,3 +58,56 @@ pub fn get_text_color(style: &Option<String>) -> [u8; 4] {
 
     [0, 0, 0, 255]
 }
+
+pub fn get_font_size(style: &Option<String>) -> u32 {
+    if let Some(style_text) = style {
+
+        let style_text = style_text.replace(" ", "");
+
+        // basic font sizes added
+        if style_text.contains("font-size:10px") {
+            return 10;
+        }
+        if style_text.contains("font-size:12px") {
+            return 12;
+        }
+        if style_text.contains("font-size:14px") {
+            return 14;
+        }
+        if style_text.contains("font-size:16px") {
+            return 16;
+        }
+        if style_text.contains("font-size:18px") {
+            return 18;
+        }
+        if style_text.contains("font-size:20px") {
+            return 20;
+        }
+        if style_text.contains("font-size:22px") {
+            return 22;
+        }
+        if style_text.contains("font-size:24px") {
+            return 24;
+        }
+        if style_text.contains("font-size:26px") {
+            return 26;
+        }
+        if style_text.contains("font-size:28px") {
+            return 28;
+        }
+        if style_text.contains("font-size:30px") {
+            return 30;
+        }
+        if style_text.contains("font-size:32px") {
+            return 32;
+        }
+        if style_text.contains("font-size:34px") {
+            return 34;
+        }
+        if style_text.contains("font-size:36px") {
+            return 36;
+        }
+    }
+
+    16
+}
