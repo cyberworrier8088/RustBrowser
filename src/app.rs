@@ -1,6 +1,5 @@
 // src/app.rs :)
 
-
 //////////////////////////
 // start of file
 /////////////////////////
@@ -9,6 +8,7 @@
 use crate::{
     dom::{Document, Node, parse_html},
     downloads::download_file,
+    layout::{layout_document, print_layout_boxes},
     net::fetch_page,
     render::{LinkBox, TextBox, draw_page},
 };
@@ -59,10 +59,6 @@ pub struct App {
 
 // this is implementation of app struct
 impl App {
-
-
-
-
     // create new tab
     pub fn new_tab(&mut self, url: &str) {
         self.tabs.push(Tab {
@@ -87,16 +83,14 @@ impl App {
         &mut self.tabs[self.active_tab]
     }
 
-
     pub fn new(window: Window, pixels: Pixels, initial_url: &str) -> Self {
         let mut app = Self {
-            
             // bookmark
             bookmarks: Vec::new(),
-            
+
             // image cache
             image_cache: std::collections::HashMap::new(),
-            
+
             window,
             pixels,
             links: Vec::new(),
@@ -133,9 +127,9 @@ impl App {
         let current_url = &self.tabs[active].current_url;
         let scroll_y = self.tabs[active].scroll_y;
         let frame = self.pixels.frame_mut();
-        
+
         let tab_urls: Vec<String> = self.tabs.iter().map(|t| t.current_url.clone()).collect();
-        
+
         draw_page(
             frame,
             &mut self.image_cache,
@@ -302,7 +296,6 @@ impl App {
                         println!("Download Failed: {}", e)
                     }
                 }
-                
             } else {
                 self.visit(url);
             }
@@ -349,19 +342,24 @@ impl App {
             Ok(html) => {
                 println!("Downloaded {} bytes. Parsing HTML...", html.len());
                 let mut document = parse_html(&html);
-                
+
                 // resolve image URLs in the Node tree directly
                 if let Some(ref mut root) = document.root {
                     resolve_image_urls_in_tree(root, &current_url);
                 }
+                let layout_boxes = layout_document(&document);
+                print_layout_boxes(&layout_boxes);
                 // store the final result
                 let tab = self.current_tab_mut();
                 tab.document = document;
                 tab.scroll_y = 0;
             }
             Err(error) => {
-                self.current_tab_mut().document =
+                let document =
                     Document::from_message(format!("Could not load {}\n\n{}", current_url, error));
+                let layout_boxes = layout_document(&document);
+                print_layout_boxes(&layout_boxes);
+                self.current_tab_mut().document = document;
             }
         }
     }
@@ -373,7 +371,7 @@ impl App {
             self.bookmarks.push(url.clone());
 
             println!("Bookmarked: {}", url);
-        }else {
+        } else {
             println!("Already bookmarked")
         }
     }
@@ -389,17 +387,15 @@ impl App {
             return;
         }
         match arboard::Clipboard::new() {
-            Ok(mut clipboard) => {
-                match clipboard.set_text(self.selected_text.clone()) {
-                    Ok(_) => {
-                        println!("Copied To Clipboard");
-                        println!("Copied: {}", self.selected_text);
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to copy to clipboard: {:?}", e);
-                    }
+            Ok(mut clipboard) => match clipboard.set_text(self.selected_text.clone()) {
+                Ok(_) => {
+                    println!("Copied To Clipboard");
+                    println!("Copied: {}", self.selected_text);
                 }
-            }
+                Err(e) => {
+                    eprintln!("Failed to copy to clipboard: {:?}", e);
+                }
+            },
             Err(e) => {
                 eprintln!("Failed to initialize clipboard: {:?}", e);
             }
@@ -412,7 +408,9 @@ impl App {
         let x2 = self.selection_start.0.max(self.selection_end.0);
         let y2 = self.selection_start.1.max(self.selection_end.1);
 
-        let mut selected_boxes: Vec<&TextBox> = self.text_boxes.iter()
+        let mut selected_boxes: Vec<&TextBox> = self
+            .text_boxes
+            .iter()
             .filter(|tb| {
                 let tb_x2 = tb.x + tb.width;
                 let tb_y2 = tb.y + tb.height;
@@ -463,15 +461,14 @@ impl App {
 fn is_downloadable(url: &str) -> bool {
     let lower = url.to_lowercase();
 
-    lower.ends_with(".zip") || lower.ends_with(".pdf") ||
-    lower.ends_with(".png") || lower.ends_with(".jpg") ||
-    lower.ends_with(".jpeg")
+    lower.ends_with(".zip")
+        || lower.ends_with(".pdf")
+        || lower.ends_with(".png")
+        || lower.ends_with(".jpg")
+        || lower.ends_with(".jpeg")
 }
 
 fn normalize_url(input: &str) -> String {
-
-
-
     let input = input.trim();
 
     if input.starts_with("http://") || input.starts_with("https://") {
@@ -487,7 +484,6 @@ fn normalize_url(input: &str) -> String {
     let query = input.replace(' ', "+");
 
     format!("https://www.google.com/search?q={}", query)
-
 }
 
 // func for user URL in the page correcting to go
@@ -515,8 +511,6 @@ fn resolve_image_urls_in_tree(node: &mut Node, base_url: &str) {
         resolve_image_urls_in_tree(child, base_url);
     }
 }
-
-
 
 ////////////////////////
 // End of file

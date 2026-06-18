@@ -1,25 +1,21 @@
 // src/render.rs
 
-
 /////////////////////////
 // top of file
 /////////////////////////
 
-
 // import modules from other files
 use crate::dom::Document;
+use crate::layout::{LayoutBox, layout_document};
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
+use crate::css::{get_font_size, get_text_color};
 use crate::net::fetch_image;
-use crate::css::{get_text_color, get_font_size};
 
 pub const WIDTH: u32 = 800;
 pub const HEIGHT: u32 = 600;
 
-const TAB_BAR_HEIGHT: i32 = 28;
 pub const ADDRESS_BAR_HEIGHT: i32 = 72;
-const CONTENT_LEFT: i32 = 10;
-const CONTENT_TOP: i32 = 84;
 const TAB_WIDTH: i32 = 140;
 
 pub struct LinkBox {
@@ -124,14 +120,7 @@ fn draw_address_bar(
             [45, 45, 50, 255]
         };
 
-        fill_rect(
-            frame,
-            tab_x,
-            2,
-            TAB_WIDTH,
-            24,
-            bg_color,
-        );
+        fill_rect(frame, tab_x, 2, TAB_WIDTH, 24, bg_color);
 
         let title = get_tab_title(url);
         let truncated_title = if title.len() > 12 {
@@ -163,22 +152,8 @@ fn draw_address_bar(
     }
 
     // draw '+' new tab button
-    fill_rect(
-        frame,
-        tab_x,
-        2,
-        24,
-        24,
-        [45, 45, 50, 255],
-    );
-    draw_text_line_raw(
-        frame,
-        "+",
-        tab_x + 8,
-        10,
-        1,
-        [255, 255, 255, 255],
-    );
+    fill_rect(frame, tab_x, 2, 24, 24, [45, 45, 50, 255]);
+    draw_text_line_raw(frame, "+", tab_x + 8, 10, 1, [255, 255, 255, 255]);
 
     // 3. address bar input field white if active/typing, off-white if not
     let input_bg = if typing {
@@ -211,259 +186,369 @@ fn draw_document(
     text_boxes: &mut Vec<TextBox>,
     scroll_y: i32,
 ) {
-    let mut y = CONTENT_TOP + scroll_y;
+    let layout_boxes = layout_document(document);
 
-    // dom renderer: render directly from node tree
-    if let Some(root) = &document.root {
-        render_node(root, frame, cache, links, text_boxes, &mut y);
-    }
+    // browser pipeline:
+    // dom tree = structure
+    // layout tree = positions and sizes
+    // renderer = pixels
+    render_layout_tree(&layout_boxes, frame, cache, links, text_boxes, scroll_y);
 }
 
-// dom renderer: renders directly from the node tree
-
-fn render_node(
-    node: &crate::dom::Node,
+// Final document renderer:
+// dom tree = structure
+// layout tree = positions and sizes
+// renderer = pixels only
+pub fn render_layout_tree(
+    layout_boxes: &[LayoutBox],
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     links: &mut Vec<LinkBox>,
     text_boxes: &mut Vec<TextBox>,
-    y: &mut i32,
+    scroll_y: i32,
 ) {
-    match node.tag.as_str() {
-        // headings
-        "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
-            let scale = match node.tag.as_str() {
+    for layout_box in layout_boxes {
+        render_layout_box(layout_box, frame, cache, links, text_boxes, scroll_y);
+    }
+}
+
+pub fn render_layout_box(
+    layout_box: &LayoutBox,
+    frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    links: &mut Vec<LinkBox>,
+    text_boxes: &mut Vec<TextBox>,
+    scroll_y: i32,
+) {
+    match layout_box.tag.as_str() {
+        "h1" | "h2" | "h3" => {
+            let scale = match layout_box.tag.as_str() {
                 "h1" => 3,
                 "h2" | "h3" => 2,
                 _ => 1,
             };
-            let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, scale, [0, 0, 0, 255], false, text_boxes);
-            *y += 12;
+
+            draw_wrapped_text_in_box(
+                frame,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                scale,
+                [0, 0, 0, 255],
+                false,
+                text_boxes,
+            );
         }
 
-        // paragraphs
         "p" => {
-            let text = collect_render_text(node);
-            let color = get_text_color(&node.style);
-            let font_size = get_font_size(&node.style);
+            let color = get_text_color(&layout_box.style);
+            let font_size = get_font_size(&layout_box.style);
             let scale = match font_size {
                 0..=16 => 1,
                 17..=32 => 2,
                 _ => 3,
             };
-            *y = draw_wrapped_text(
+
+            draw_wrapped_text_in_box(
                 frame,
-                &text,
-                CONTENT_LEFT,
-                *y,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
                 scale,
                 color,
                 false,
                 text_boxes,
             );
-            *y += 12;  // add 12px margin after each paragraph
-            }
+        }
 
-        // message (used by Document::from_message for error pages)
         "message" => {
-            *y = draw_wrapped_text(frame, &node.text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], false, text_boxes);
-            *y += 12;
-        }
-
-        // links
-        "a" => {
-            let text = collect_render_text(node);
-            let href = node.attributes.iter()
-                .find(|(k, _)| k == "href")
-                .map(|(_, v)| v.clone())
-                .unwrap_or_default();
-
-            if !text.is_empty() && !href.is_empty() {
-                let start_y = *y;
-                *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [95, 170, 255, 255], false, text_boxes);
-                let height = (*y - start_y).max(10);
-
-                links.push(LinkBox {
-                    text: text.clone(),
-                    url: href,
-                    x: CONTENT_LEFT,
-                    y: start_y,
-                    width: (text.len() as i32 * 8).min(WIDTH as i32 - CONTENT_LEFT * 2),
-                    height,
-                });
-
-                *y += 12;
-            }
-        }
-
-        // list items
-        "li" => {
-            let text = collect_render_text(node);
-            *y = draw_wrapped_text(
+            draw_wrapped_text_in_box(
                 frame,
-                &format!("* {}", text),
-                CONTENT_LEFT + 20,
-                *y,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
                 1,
                 [0, 0, 0, 255],
                 false,
                 text_boxes,
             );
-            *y += 8;
         }
 
-        // bold
-        "b" | "strong" => {
-            let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 2, [0, 0, 0, 255], false, text_boxes);
-            *y += 12;
-        }
-
-        // italic
-        "i" | "em" => {
-            let text = collect_render_text(node);
-            *y = draw_wrapped_text(frame, &text, CONTENT_LEFT, *y, 1, [0, 0, 0, 255], true, text_boxes);
-            *y += 12;
-        }
-
-        // images
-        "img" => {
-            let src = node.attributes.iter()
-                .find(|(k, _)| k == "src")
-                .map(|(_, v)| v.clone())
-                .unwrap_or_default();
-            let alt = node.attributes.iter()
-                .find(|(k, _)| k == "alt")
-                .map(|(_, v)| v.clone())
-                .unwrap_or_default();
-
-            let is_network = src.starts_with("http://") || src.starts_with("https://");
-
-            if is_network {
-                if let Some(height) = draw_network_image(frame, cache, &src, CONTENT_LEFT, *y) {
-                    *y += height + 12;
-                    return;
-                }
-            } else if !src.is_empty() {
-                if let Some(height) = draw_local_image(frame, &src, CONTENT_LEFT, *y) {
-                    *y += height + 12;
-                    return;
-                }
-            }
-
-            // fallback placeholder
-            let box_width = 220;
-            let box_height = 80;
-            fill_rect(frame, CONTENT_LEFT, *y, box_width, box_height, [45, 50, 60, 255]);
-            draw_text_line_raw(frame, "[ IMAGE ]", CONTENT_LEFT + 10, *y + 10, 1, [255, 255, 255, 255]);
-            draw_text_line_raw(frame, &format!("src: {}", src), CONTENT_LEFT + 10, *y + 30, 1, [180, 180, 180, 255]);
-            if !alt.is_empty() {
-                draw_text_line_raw(frame, &alt, CONTENT_LEFT + 10, *y + 50, 1, [220, 220, 220, 255]);
-            }
-            *y += box_height + 12;
-        }
-
-        // horizontal rule
-        "hr" => {
-            draw_horizontal_line(frame, *y);
-            *y += 20;
-        }
-
-        // table rows
-        "tr" => {
-            let mut cell_x = CONTENT_LEFT;
-            for child in &node.children {
-                if child.tag == "td" || child.tag == "th" {
-                    let cell_text = collect_render_text(child);
-                    draw_wrapped_text(frame, &cell_text, cell_x, *y, 1, [0, 0, 0, 255], false, text_boxes);
-                    cell_x += 160;
-                }
-            }
-            *y += 24;
-        }
-
-        // div tag
         "div" => {
-            *y += 4;
-
-            for child in &node.children {
-                render_node(child, frame, cache, links, text_boxes, y);
-            }
-
-            *y += 4;
+            render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
         }
 
-        // span tag
-        "span" => {
-            for child in &node.children {
-                render_node(child, frame, cache, links, text_boxes, y);
-            }
+        "img" => {
+            render_image_layout_box(layout_box, frame, cache, scroll_y);
         }
 
-        "#text" => {
-            let text = node.text.trim();
+        "table" | "tbody" | "thead" => {
+            render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
+        }
 
-            if !text.is_empty() {
-                *y = draw_wrapped_text(
+        "tr" => {
+            render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
+        }
+
+        "td" | "th" => {
+            draw_wrapped_text_in_box(
+                frame,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                1,
+                [0, 0, 0, 255],
+                false,
+                text_boxes,
+            );
+        }
+
+        "ul" => {
+            render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
+        }
+
+        "li" => {
+            draw_wrapped_text_in_box(
+                frame,
+                &format!("* {}", layout_box.text),
+                layout_box.x + 20,
+                layout_box.y + scroll_y,
+                layout_box.width - 20,
+                1,
+                [0, 0, 0, 255],
+                false,
+                text_boxes,
+            );
+        }
+
+        "a" => {
+            let href = layout_attribute(layout_box, "href");
+
+            if !layout_box.text.is_empty() && !href.is_empty() {
+                draw_wrapped_text_in_box(
                     frame,
-                    text,
-                    CONTENT_LEFT,
-                    *y,
+                    &layout_box.text,
+                    layout_box.x,
+                    layout_box.y + scroll_y,
+                    layout_box.width,
+                    1,
+                    [95, 170, 255, 255],
+                    false,
+                    text_boxes,
+                );
+
+                links.push(LinkBox {
+                    text: layout_box.text.clone(),
+                    url: href,
+                    x: layout_box.x,
+                    y: layout_box.y + scroll_y,
+                    width: layout_box.width,
+                    height: layout_box.height.max(10),
+                });
+            }
+        }
+
+        "b" | "strong" => {
+            draw_wrapped_text_in_box(
+                frame,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                2,
+                [0, 0, 0, 255],
+                false,
+                text_boxes,
+            );
+        }
+
+        "i" | "em" => {
+            draw_wrapped_text_in_box(
+                frame,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                1,
+                [0, 0, 0, 255],
+                true,
+                text_boxes,
+            );
+        }
+
+        "span" => {
+            if layout_box.children.is_empty() {
+                draw_wrapped_text_in_box(
+                    frame,
+                    &layout_box.text,
+                    layout_box.x,
+                    layout_box.y + scroll_y,
+                    layout_box.width,
                     1,
                     [0, 0, 0, 255],
                     false,
                     text_boxes,
                 );
-
-                *y += 4;
+            } else {
+                render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
             }
         }
 
-        // all other tags: just recurse into children
+        "#text" => {
+            draw_wrapped_text_in_box(
+                frame,
+                &layout_box.text,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                1,
+                [0, 0, 0, 255],
+                false,
+                text_boxes,
+            );
+        }
+
+        "hr" => {
+            draw_horizontal_line(frame, layout_box.y + scroll_y);
+        }
+
         _ => {
-            for child in &node.children {
-                render_node(child, frame, cache, links, text_boxes, y);
-            }
+            render_layout_children(layout_box, frame, cache, links, text_boxes, scroll_y);
         }
     }
 }
 
-// collect all descendant text from a node tree
-// gathers content from "#text" nodes, preserving spaces between words
-fn collect_render_text(node: &crate::dom::Node) -> String {
-    let mut result = String::new();
-    collect_render_text_recursive(node, &mut result);
-    // collapse whitespace runs into single spaces and trim
-    result.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-fn collect_render_text_recursive(node: &crate::dom::Node, output: &mut String) {
-    if node.tag == "#text" {
-        output.push_str(&node.text);
-        output.push(' ');
-    }
-    if node.tag == "br" {
-        output.push('\n');
-    }
-    for child in &node.children {
-        collect_render_text_recursive(child, output);
+fn render_layout_children(
+    layout_box: &LayoutBox,
+    frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    links: &mut Vec<LinkBox>,
+    text_boxes: &mut Vec<TextBox>,
+    scroll_y: i32,
+) {
+    for child in &layout_box.children {
+        render_layout_box(child, frame, cache, links, text_boxes, scroll_y);
     }
 }
 
-fn draw_wrapped_text(
+fn render_image_layout_box(
+    layout_box: &LayoutBox,
+    frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
+    scroll_y: i32,
+) {
+    let src = layout_attribute(layout_box, "src");
+    let alt = layout_attribute(layout_box, "alt");
+    let y = layout_box.y + scroll_y;
+    let is_network = src.starts_with("http://") || src.starts_with("https://");
+
+    if is_network {
+        if draw_network_image_in_box(
+            frame,
+            cache,
+            &src,
+            layout_box.x,
+            y,
+            layout_box.width,
+            layout_box.height,
+        )
+        .is_some()
+        {
+            return;
+        }
+    } else if !src.is_empty()
+        && draw_local_image_in_box(
+            frame,
+            &src,
+            layout_box.x,
+            y,
+            layout_box.width,
+            layout_box.height,
+        )
+        .is_some()
+    {
+        return;
+    }
+
+    fill_rect(
+        frame,
+        layout_box.x,
+        y,
+        layout_box.width,
+        layout_box.height,
+        [45, 50, 60, 255],
+    );
+    draw_text_line_raw(
+        frame,
+        "[ IMAGE ]",
+        layout_box.x + 10,
+        y + 10,
+        1,
+        [255, 255, 255, 255],
+    );
+    draw_text_line_raw(
+        frame,
+        &format!("src: {}", src),
+        layout_box.x + 10,
+        y + 30,
+        1,
+        [180, 180, 180, 255],
+    );
+    if !alt.is_empty() {
+        draw_text_line_raw(
+            frame,
+            &alt,
+            layout_box.x + 10,
+            y + 50,
+            1,
+            [220, 220, 220, 255],
+        );
+    }
+}
+
+fn layout_attribute(layout_box: &LayoutBox, name: &str) -> String {
+    layout_box
+        .attributes
+        .iter()
+        .find(|(key, _)| key == name)
+        .map(|(_, value)| value.clone())
+        .unwrap_or_default()
+}
+
+fn draw_wrapped_text_in_box(
     frame: &mut [u8],
     text: &str,
     start_x: i32,
     start_y: i32,
+    width: i32,
     scale: i32,
     color: [u8; 4],
-    italic: bool, // new
+    italic: bool,
+    text_boxes: &mut Vec<TextBox>,
+) -> i32 {
+    let max_x = start_x + width;
+    draw_wrapped_text_with_max_x(
+        frame, text, start_x, start_y, max_x, scale, color, italic, text_boxes,
+    )
+}
+
+fn draw_wrapped_text_with_max_x(
+    frame: &mut [u8],
+    text: &str,
+    start_x: i32,
+    start_y: i32,
+    max_x: i32,
+    scale: i32,
+    color: [u8; 4],
+    italic: bool,
     text_boxes: &mut Vec<TextBox>,
 ) -> i32 {
     let char_width = 8 * scale;
     let line_height = 12 * scale;
-    let max_x = WIDTH as i32 - 10;
     let mut x = start_x;
     let mut y = start_y;
     let shear = if italic { 0.35 } else { 0.0 };
@@ -637,7 +722,7 @@ fn draw_char_italic(
     if let Some(bitmap) = BASIC_FONTS.get(ch) {
         for (row, bits) in bitmap.iter().enumerate() {
             for col in 0..8 {
-                if (bits >> col) & 1 != 0 {          
+                if (bits >> col) & 1 != 0 {
                     let shear_offset = ((7 - row) as f32 * scale as f32 * shear) as i32;
                     let new_x = x + col * scale + shear_offset;
                     let new_y = y + row as i32 * scale;
@@ -648,14 +733,13 @@ fn draw_char_italic(
     }
 }
 
-
-
-
-fn draw_local_image(
+fn draw_local_image_in_box(
     frame: &mut [u8],
     path: &str,
     x: i32,
     y: i32,
+    width: i32,
+    height: i32,
 ) -> Option<i32> {
     let img = match image::ImageReader::open(path) {
         Ok(reader) => match reader.with_guessed_format() {
@@ -677,7 +761,9 @@ fn draw_local_image(
         }
     };
 
-    let scaled_img = img.thumbnail(300, 200);
+    let target_width = width.max(1) as u32;
+    let target_height = height.max(1) as u32;
+    let scaled_img = img.thumbnail(target_width, target_height);
     let rgba = scaled_img.to_rgba8();
 
     let width = rgba.width();
@@ -687,66 +773,55 @@ fn draw_local_image(
         for px in 0..width {
             let pixel = rgba.get_pixel(px, py);
 
-            set_pixel(
-                frame,
-                x + px as i32,
-                y + py as i32,
-                pixel.0,
-            );
+            set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
         }
     }
 
     Some(height as i32)
 }
 
-fn draw_network_image(
+fn draw_network_image_in_box(
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     url: &str,
     x: i32,
     y: i32,
+    width: i32,
+    height: i32,
 ) -> Option<i32> {
-
     // try cache first
 
     if let Some(rgba) = cache.get(url) {
         //println!("Cache HIT: {}", url);
         let width = rgba.width();
-        
+
         let height = rgba.height();
-        
+
         for py in 0..height {
             for px in 0..width {
                 let pixel = rgba.get_pixel(px, py);
-                set_pixel(
-                    frame,
-                    x + px as i32,
-                    y + py as i32,
-                    pixel.0,
-                );
+                set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
             }
         }
-        
+
         return Some(height as i32);
-    
     }
-    
+
     // try fetch
 
     let bytes = fetch_image(url).ok()?;
 
     let img = image::load_from_memory(&bytes).ok()?;
 
-    let scaled_img = img.thumbnail(300, 200);
+    let target_width = width.max(1) as u32;
+    let target_height = height.max(1) as u32;
+    let scaled_img = img.thumbnail(target_width, target_height);
 
     let rgba = scaled_img.to_rgba8();
 
     println!("Cache MISS: {}", url);
 
-    cache.insert(
-        url.to_string(),
-        rgba.clone(),
-    );
+    cache.insert(url.to_string(), rgba.clone());
 
     let width = rgba.width();
     let height = rgba.height();
@@ -755,19 +830,12 @@ fn draw_network_image(
         for px in 0..width {
             let pixel = rgba.get_pixel(px, py);
 
-            set_pixel(
-                frame,
-                x + px as i32,
-                y + py as i32,
-                pixel.0,
-            );
+            set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
         }
     }
 
     Some(height as i32)
 }
-
-
 
 // horizontal line render function
 fn draw_horizontal_line(frame: &mut [u8], y: i32) {
@@ -779,9 +847,6 @@ fn draw_horizontal_line(frame: &mut [u8], y: i32) {
         set_pixel(frame, x, y, [200, 200, 200, 255]);
     }
 }
-
-
-
 
 /////////////////////////
 // End of file

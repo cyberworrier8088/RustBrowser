@@ -2,7 +2,7 @@ use std::fs;
 
 pub fn download_file(url: &str) -> Result<(), String> {
     println!("[DOWNLOAD]: Downloading {}", url);
-    
+
     fs::create_dir_all("downloads").map_err(|e| e.to_string())?;
 
     let response = reqwest::blocking::get(url).map_err(|e| e.to_string())?;
@@ -18,8 +18,6 @@ pub fn download_file(url: &str) -> Result<(), String> {
     println!("Download folder ready");
     println!("Downloaded {} bytes", bytes.len());
     println!("Saved to {}", path);
-
-    
 
     Ok(())
 }

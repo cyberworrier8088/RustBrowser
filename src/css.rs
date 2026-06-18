@@ -1,16 +1,13 @@
 // src/css.rs
 
-
-
 // style struct that used for storing css properties
 pub struct Style {
-    pub color: Option<[u8; 4]>,       // css
-    pub background: Option<[u8; 4]>,  // css
+    pub color: Option<[u8; 4]>,      // css
+    pub background: Option<[u8; 4]>, // css
 }
 
 pub fn get_text_color(style: &Option<String>) -> [u8; 4] {
     if let Some(style_text) = style {
-
         // basic colors added
         if style_text.contains("color:red") {
             return [255, 0, 0, 255];
@@ -61,7 +58,6 @@ pub fn get_text_color(style: &Option<String>) -> [u8; 4] {
 
 pub fn get_font_size(style: &Option<String>) -> u32 {
     if let Some(style_text) = style {
-
         let style_text = style_text.replace(" ", "");
 
         // basic font sizes added

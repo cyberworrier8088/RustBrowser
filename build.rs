@@ -4,7 +4,6 @@
 // this not more improtent but it make the exe look professional .
 // thankyou
 
-
 fn main() {
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();

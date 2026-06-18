@@ -1,17 +1,11 @@
 // src/dom.rs :)
 
-
 // dom: Document Object Model :)
 // introduction of dom: document object model is a programming interface for web documents.
-
-
 
 /////////////////////////
 // top of file
 /////////////////////////
-
-
-
 
 // using libraries
 use html5ever::{parse_document, tendril::TendrilSink};
@@ -23,7 +17,6 @@ pub struct Document {
     pub root: Option<Node>,
 }
 
-
 #[derive(Clone, Debug)]
 pub struct Node {
     pub tag: String,
@@ -33,9 +26,7 @@ pub struct Node {
     pub children: Vec<Node>,
 }
 
-
 impl Document {
-
     pub fn from_message(message: String) -> Self {
         Self {
             root: Some(Node {
@@ -44,17 +35,13 @@ impl Document {
                 style: None,
                 attributes: Vec::new(),
                 children: Vec::new(),
-            })
+            }),
         }
     }
 }
 
-
 pub fn parse_html(html: &str) -> Document {
-    let dom = parse_document(
-        RcDom::default(),
-        Default::default(),
-    ).one(html);
+    let dom = parse_document(RcDom::default(), Default::default()).one(html);
 
     Document {
         root: Some(build_node(&dom.document)),
@@ -74,10 +61,8 @@ fn build_node(handle: &Handle) -> Node {
         NodeData::Element { name, attrs, .. } => {
             node.tag = name.local.to_string();
             for attr in attrs.borrow().iter() {
-                node.attributes.push((
-                    attr.name.local.to_string(),
-                    attr.value.to_string(),
-                ));
+                node.attributes
+                    .push((attr.name.local.to_string(), attr.value.to_string()));
                 if attr.name.local.to_string() == "style" {
                     node.style = Some(attr.value.to_string());
                 }
@@ -100,10 +85,6 @@ fn build_node(handle: &Handle) -> Node {
 
     node
 }
-
-
-
-
 
 ////////////////////////
 // End of file

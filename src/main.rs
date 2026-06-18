@@ -15,10 +15,9 @@ mod app;
 mod css;
 mod dom;
 mod downloads;
+mod layout;
 mod net;
 mod render;
-
-
 
 // useing libraries
 use app::App;
@@ -32,10 +31,8 @@ use winit::{
     window::WindowBuilder,
 };
 
-
 //  main function
 fn main() {
-    
     println!("Creating EventLoop...");
     let event_loop = EventLoop::new().unwrap();
 
@@ -71,7 +68,8 @@ fn main() {
                         app.mouse_y = position.y as i32;
                         if app.selecting {
                             if app.selection_start.1 >= render::ADDRESS_BAR_HEIGHT {
-                                app.selection_end = (app.mouse_x, app.mouse_y.max(render::ADDRESS_BAR_HEIGHT));
+                                app.selection_end =
+                                    (app.mouse_x, app.mouse_y.max(render::ADDRESS_BAR_HEIGHT));
                                 app.update_selection();
                                 println!("Selection Updated");
                             } else {
@@ -121,7 +119,7 @@ fn main() {
                     }
                     WindowEvent::KeyboardInput { event, .. } => {
                         let is_pressed = event.state == ElementState::Pressed;
-                        
+
                         match &event.logical_key {
                             Key::Named(NamedKey::Control) => {
                                 app.ctrl_pressed = is_pressed;
@@ -133,7 +131,9 @@ fn main() {
                             let mut handled = false;
                             if app.ctrl_pressed {
                                 match &event.logical_key {
-                                    Key::Character(text) if text.to_lowercase() == "c" || text == "\u{3}" => {
+                                    Key::Character(text)
+                                        if text.to_lowercase() == "c" || text == "\u{3}" =>
+                                    {
                                         app.copy_selection_to_clipboard();
                                         handled = true;
                                     }
@@ -180,7 +180,6 @@ fn handle_key(app: &mut App, key: Key) {
     }
 
     match key {
-
         // this for user type  "/" key to open address bar and type
         Key::Character(text) if text == "/" => app.start_typing(),
 
@@ -202,11 +201,6 @@ fn handle_key(app: &mut App, key: Key) {
         _ => {}
     }
 }
-
-
-
-
-
 
 /////////////////////////
 // End of file

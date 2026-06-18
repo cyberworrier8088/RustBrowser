@@ -1,10 +1,8 @@
 // src/net.rs
 
-
 /////////////////////////
 // top of file
 /////////////////////////
-
 
 // using libraries
 use reqwest::blocking;
@@ -16,7 +14,6 @@ pub fn fetch_page(url: &str) -> Result<String, String> {
         .text()
         .map_err(|error| error.to_string())
 }
-
 
 // func for fetch image from url for display in the page
 pub fn fetch_image(url: &str) -> Result<Vec<u8>, String> {
