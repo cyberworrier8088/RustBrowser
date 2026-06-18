@@ -8,7 +8,7 @@
 use crate::{
     dom::{Document, Node, parse_html},
     downloads::download_file,
-    layout::{layout_document, print_layout_boxes},
+    layout::{LayoutBox, layout_document},
     net::fetch_page,
     render::{LinkBox, TextBox, draw_page},
 };
@@ -21,6 +21,7 @@ use winit::{event::MouseScrollDelta, window::Window};
 // tab struct
 pub struct Tab {
     pub document: Document,
+    pub layout_boxes: Vec<LayoutBox>,
     pub current_url: String,
     pub history: Vec<String>,
     pub history_index: usize,
@@ -63,6 +64,7 @@ impl App {
     pub fn new_tab(&mut self, url: &str) {
         self.tabs.push(Tab {
             document: Document::default(),
+            layout_boxes: Vec::new(),
             current_url: url.to_string(),
             history: vec![url.to_string()],
             history_index: 0,
@@ -100,6 +102,7 @@ impl App {
             mouse_y: 0,
             tabs: vec![Tab {
                 document: Document::default(),
+                layout_boxes: Vec::new(),
                 current_url: initial_url.to_string(),
                 history: vec![initial_url.to_string()],
                 history_index: 0,
@@ -123,7 +126,7 @@ impl App {
     pub fn draw(&mut self) {
         self.text_boxes.clear();
         let active = self.active_tab;
-        let document = &self.tabs[active].document;
+        let layout_boxes = &self.tabs[active].layout_boxes;
         let current_url = &self.tabs[active].current_url;
         let scroll_y = self.tabs[active].scroll_y;
         let frame = self.pixels.frame_mut();
@@ -135,7 +138,7 @@ impl App {
             &mut self.image_cache,
             &tab_urls,
             self.active_tab,
-            document,
+            layout_boxes,
             &mut self.links,
             &mut self.text_boxes,
             current_url,
@@ -201,6 +204,7 @@ impl App {
         if self.tabs.len() <= 1 {
             self.tabs[0] = Tab {
                 document: Document::default(),
+                layout_boxes: Vec::new(),
                 current_url: "src/main.html".to_string(),
                 history: vec!["src/main.html".to_string()],
                 history_index: 0,
@@ -348,18 +352,20 @@ impl App {
                     resolve_image_urls_in_tree(root, &current_url);
                 }
                 let layout_boxes = layout_document(&document);
-                print_layout_boxes(&layout_boxes);
                 // store the final result
                 let tab = self.current_tab_mut();
                 tab.document = document;
+                tab.layout_boxes = layout_boxes;
                 tab.scroll_y = 0;
             }
             Err(error) => {
                 let document =
                     Document::from_message(format!("Could not load {}\n\n{}", current_url, error));
                 let layout_boxes = layout_document(&document);
-                print_layout_boxes(&layout_boxes);
-                self.current_tab_mut().document = document;
+                let tab = self.current_tab_mut();
+                tab.document = document;
+                tab.layout_boxes = layout_boxes;
+                tab.scroll_y = 0;
             }
         }
     }
@@ -490,6 +496,14 @@ fn normalize_url(input: &str) -> String {
 pub fn resolve_url(base_url: &str, url: &str) -> String {
     if url.starts_with("http://") || url.starts_with("https://") {
         return url.to_string();
+    }
+
+    if !(base_url.starts_with("http://") || base_url.starts_with("https://")) {
+        let base_path = std::path::Path::new(base_url);
+        let parent = base_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(""));
+        return parent.join(url).to_string_lossy().to_string();
     }
 
     match reqwest::Url::parse(base_url).and_then(|base| base.join(url)) {

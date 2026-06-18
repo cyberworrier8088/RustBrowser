@@ -1,6 +1,5 @@
 // src/layout.rs
 
-
 // :)
 // A browser uses a few separate trees:
 //
@@ -19,8 +18,7 @@
 // Keeping those jobs apart makes CSS backgrounds, margins, padding, borders,
 // images, tables, buttons, and forms much easier to grow later.
 
-
-// :) 
+// :)
 use crate::dom::{Document, Node};
 
 const CONTENT_LEFT: i32 = 10;
@@ -57,13 +55,22 @@ pub fn layout_document(document: &Document) -> Vec<LayoutBox> {
     boxes
 }
 
-// Builds one layout box for one DOM node.
-// This function calculates positions only. It never paints pixels.
+// builds one layout box for one DOM node.
+// this function calculates positions only.
+// it never paints pixels :)
 pub fn layout_node(node: &Node, y: &mut i32) -> Option<LayoutBox> {
     if node.tag == "#text" && node.text.trim().is_empty() {
         return None;
     }
 
+    // disable some tags
+    if node.tag == "script"
+        || node.tag == "style"
+        || node.tag == "!doctype"
+        || node.tag == "noscript"
+    {
+        return None;
+    }
     let start_y = *y;
     let mut layout_box = LayoutBox {
         x: CONTENT_LEFT,
@@ -116,6 +123,10 @@ pub fn layout_node(node: &Node, y: &mut i32) -> Option<LayoutBox> {
             layout_box.height = 20;
             *y += layout_box.height;
         }
+        "html" | "body" => {
+            layout_box.children = layout_children(node, y);
+            layout_box.height = *y - start_y;
+        }
 
         _ => {
             layout_box.children = layout_children(node, y);
@@ -124,13 +135,6 @@ pub fn layout_node(node: &Node, y: &mut i32) -> Option<LayoutBox> {
     }
 
     Some(layout_box)
-}
-
-pub fn print_layout_boxes(layout_boxes: &[LayoutBox]) {
-    println!("layout tree:");
-    for layout_box in layout_boxes {
-        print_layout_box(layout_box, 0);
-    }
 }
 
 fn layout_children(node: &Node, y: &mut i32) -> Vec<LayoutBox> {
@@ -187,7 +191,8 @@ fn default_height(node: &Node) -> i32 {
 
 fn add_default_spacing(node: &Node, y: &mut i32) {
     match node.tag.as_str() {
-        "h1" | "h2" | "h3" | "h4" | "h5" | "h6"| "p" | "message" | "a" | "b" | "strong" | "i" | "em" | "span" => {
+        "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "message" | "a" | "b" | "strong" | "i"
+        | "em" | "span" => {
             *y += 12;
         }
         "li" | "ul" => {
@@ -224,23 +229,5 @@ fn collect_layout_text_recursive(node: &Node, output: &mut String) {
     }
     for child in &node.children {
         collect_layout_text_recursive(child, output);
-    }
-}
-
-fn print_layout_box(layout_box: &LayoutBox, depth: usize) {
-    let indent = "  ".repeat(depth);
-    println!(
-        "{}{} x={} y={} w={} h={} text={:?}",
-        indent,
-        layout_box.tag,
-        layout_box.x,
-        layout_box.y,
-        layout_box.width,
-        layout_box.height,
-        layout_box.text
-    );
-
-    for child in &layout_box.children {
-        print_layout_box(child, depth + 1);
     }
 }

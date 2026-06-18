@@ -5,8 +5,7 @@
 /////////////////////////
 
 // import modules from other files
-use crate::dom::Document;
-use crate::layout::{LayoutBox, layout_document};
+use crate::layout::LayoutBox;
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 
 use crate::css::{get_font_size, get_text_color};
@@ -61,7 +60,7 @@ pub fn draw_page(
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     tab_urls: &[String],
     active_tab: usize,
-    document: &Document,
+    layout_boxes: &[LayoutBox],
     links: &mut Vec<LinkBox>,
     text_boxes: &mut Vec<TextBox>,
     current_url: &str,
@@ -76,7 +75,7 @@ pub fn draw_page(
     links.clear();
 
     draw_address_bar(frame, tab_urls, active_tab, current_url, typing_url, typing);
-    draw_document(frame, cache, document, links, text_boxes, scroll_y);
+    draw_document(frame, cache, layout_boxes, links, text_boxes, scroll_y);
 
     // draw selection highlight rectangle if selecting is active
     if selecting && selection_start.1 >= ADDRESS_BAR_HEIGHT {
@@ -181,18 +180,16 @@ fn draw_address_bar(
 fn draw_document(
     frame: &mut [u8],
     cache: &mut std::collections::HashMap<String, image::RgbaImage>,
-    document: &Document,
+    layout_boxes: &[LayoutBox],
     links: &mut Vec<LinkBox>,
     text_boxes: &mut Vec<TextBox>,
     scroll_y: i32,
 ) {
-    let layout_boxes = layout_document(document);
-
     // browser pipeline:
     // dom tree = structure
     // layout tree = positions and sizes
     // renderer = pixels
-    render_layout_tree(&layout_boxes, frame, cache, links, text_boxes, scroll_y);
+    render_layout_tree(layout_boxes, frame, cache, links, text_boxes, scroll_y);
 }
 
 // Final document renderer:
@@ -473,6 +470,7 @@ fn render_image_layout_box(
     } else if !src.is_empty()
         && draw_local_image_in_box(
             frame,
+            cache,
             &src,
             layout_box.x,
             y,
@@ -745,12 +743,20 @@ fn draw_char_italic(
 
 fn draw_local_image_in_box(
     frame: &mut [u8],
+    cache: &mut std::collections::HashMap<String, image::RgbaImage>,
     path: &str,
     x: i32,
     y: i32,
     width: i32,
     height: i32,
 ) -> Option<i32> {
+    let cache_key = format!("local:{}:{}x{}", path, width, height);
+
+    if let Some(rgba) = cache.get(&cache_key) {
+        draw_cached_image(frame, rgba, x, y);
+        return Some(rgba.height() as i32);
+    }
+
     let img = match image::ImageReader::open(path) {
         Ok(reader) => match reader.with_guessed_format() {
             Ok(reader) => match reader.decode() {
@@ -776,18 +782,11 @@ fn draw_local_image_in_box(
     let scaled_img = img.thumbnail(target_width, target_height);
     let rgba = scaled_img.to_rgba8();
 
-    let width = rgba.width();
-    let height = rgba.height();
+    cache.insert(cache_key.clone(), rgba);
+    let rgba = cache.get(&cache_key)?;
+    draw_cached_image(frame, rgba, x, y);
 
-    for py in 0..height {
-        for px in 0..width {
-            let pixel = rgba.get_pixel(px, py);
-
-            set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
-        }
-    }
-
-    Some(height as i32)
+    Some(rgba.height() as i32)
 }
 
 fn draw_network_image_in_box(
@@ -803,18 +802,9 @@ fn draw_network_image_in_box(
 
     if let Some(rgba) = cache.get(url) {
         //println!("Cache HIT: {}", url);
-        let width = rgba.width();
+        draw_cached_image(frame, rgba, x, y);
 
-        let height = rgba.height();
-
-        for py in 0..height {
-            for px in 0..width {
-                let pixel = rgba.get_pixel(px, py);
-                set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
-            }
-        }
-
-        return Some(height as i32);
+        return Some(rgba.height() as i32);
     }
 
     // try fetch
@@ -833,18 +823,18 @@ fn draw_network_image_in_box(
 
     cache.insert(url.to_string(), rgba.clone());
 
-    let width = rgba.width();
-    let height = rgba.height();
+    draw_cached_image(frame, &rgba, x, y);
 
-    for py in 0..height {
-        for px in 0..width {
+    Some(rgba.height() as i32)
+}
+
+fn draw_cached_image(frame: &mut [u8], rgba: &image::RgbaImage, x: i32, y: i32) {
+    for py in 0..rgba.height() {
+        for px in 0..rgba.width() {
             let pixel = rgba.get_pixel(px, py);
-
             set_pixel(frame, x + px as i32, y + py as i32, pixel.0);
         }
     }
-
-    Some(height as i32)
 }
 
 // horizontal line render function
@@ -858,15 +848,7 @@ fn draw_horizontal_line(frame: &mut [u8], y: i32) {
     }
 }
 
-
-fn draw_rect_outline(
-    frame: &mut [u8],
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-    color: [u8; 4],
-) {
+fn draw_rect_outline(frame: &mut [u8], x: i32, y: i32, width: i32, height: i32, color: [u8; 4]) {
     for px in x..x + width {
         set_pixel(frame, px, y, color);
         set_pixel(frame, px, y + height - 1, color);

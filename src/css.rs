@@ -107,6 +107,3 @@ pub fn get_font_size(style: &Option<String>) -> u32 {
 
     16
 }
-
-
-

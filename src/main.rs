@@ -49,14 +49,13 @@ fn main() {
         Pixels::new(WIDTH, HEIGHT, surface).unwrap()
     };
 
-    let mut app = App::new(window, pixels, "https://google.com");
-
-    app.new_tab(r"src/main.html");
+    let mut app = App::new(window, pixels, r"src/main.html");
+    app.window.request_redraw();
 
     println!("Running app...");
     event_loop
         .run(move |event, elwt| {
-            elwt.set_control_flow(ControlFlow::Poll);
+            elwt.set_control_flow(ControlFlow::Wait);
 
             match event {
                 Event::WindowEvent { event, .. } => match event {
@@ -72,6 +71,7 @@ fn main() {
                                     (app.mouse_x, app.mouse_y.max(render::ADDRESS_BAR_HEIGHT));
                                 app.update_selection();
                                 println!("Selection Updated");
+                                app.window.request_redraw();
                             } else {
                                 app.selection_end = (app.mouse_x, app.mouse_y);
                             }
@@ -91,6 +91,7 @@ fn main() {
                             if app.selection_start.1 >= render::ADDRESS_BAR_HEIGHT {
                                 println!("Selection Started");
                             }
+                            app.window.request_redraw();
                         } else if state == ElementState::Released {
                             if app.selecting {
                                 app.selecting = false;
@@ -100,6 +101,7 @@ fn main() {
                                     app.selection_active = false;
                                     app.selected_text.clear();
                                     app.click_link();
+                                    app.window.request_redraw();
                                 } else {
                                     if app.selection_start.1 >= render::ADDRESS_BAR_HEIGHT {
                                         app.selection_active = true;
@@ -110,12 +112,14 @@ fn main() {
                                         app.selection_active = false;
                                         app.selected_text.clear();
                                     }
+                                    app.window.request_redraw();
                                 }
                             }
                         }
                     }
                     WindowEvent::MouseWheel { delta, .. } => {
                         app.scroll(delta);
+                        app.window.request_redraw();
                     }
                     WindowEvent::KeyboardInput { event, .. } => {
                         let is_pressed = event.state == ElementState::Pressed;
@@ -143,6 +147,7 @@ fn main() {
                             if !handled {
                                 handle_key(&mut app, event.logical_key);
                             }
+                            app.window.request_redraw();
                         }
                     }
                     WindowEvent::RedrawRequested => {
@@ -150,9 +155,7 @@ fn main() {
                     }
                     _ => {}
                 },
-                Event::AboutToWait => {
-                    app.window.request_redraw();
-                }
+                Event::AboutToWait => {}
                 _ => {}
             }
         })
