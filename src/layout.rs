@@ -187,7 +187,7 @@ fn default_height(node: &Node) -> i32 {
 
 fn add_default_spacing(node: &Node, y: &mut i32) {
     match node.tag.as_str() {
-        "h1" | "h2" | "h3" | "p" | "message" | "a" | "b" | "strong" | "i" | "em" | "span" => {
+        "h1" | "h2" | "h3" | "h4" | "h5" | "h6"| "p" | "message" | "a" | "b" | "strong" | "i" | "em" | "span" => {
             *y += 12;
         }
         "li" | "ul" => {
