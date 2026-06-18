@@ -294,6 +294,16 @@ pub fn render_layout_box(
         }
 
         "td" | "th" => {
+            // draw border for table cells
+            draw_rect_outline(
+                frame,
+                layout_box.x,
+                layout_box.y + scroll_y,
+                layout_box.width,
+                layout_box.height,
+                [0, 0, 0, 255],
+            );
+
             draw_wrapped_text_in_box(
                 frame,
                 &layout_box.text,
@@ -845,6 +855,26 @@ fn draw_horizontal_line(frame: &mut [u8], y: i32) {
 
     for x in start_x..end_x {
         set_pixel(frame, x, y, [200, 200, 200, 255]);
+    }
+}
+
+
+fn draw_rect_outline(
+    frame: &mut [u8],
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    color: [u8; 4],
+) {
+    for px in x..x + width {
+        set_pixel(frame, px, y, color);
+        set_pixel(frame, px, y + height - 1, color);
+    }
+
+    for py in y..y + height {
+        set_pixel(frame, x, py, color);
+        set_pixel(frame, x + width - 1, py, color);
     }
 }
 

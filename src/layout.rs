@@ -1,5 +1,7 @@
 // src/layout.rs
 
+
+// :)
 // A browser uses a few separate trees:
 //
 // DOM Tree:
@@ -17,6 +19,8 @@
 // Keeping those jobs apart makes CSS backgrounds, margins, padding, borders,
 // images, tables, buttons, and forms much easier to grow later.
 
+
+// :) 
 use crate::dom::{Document, Node};
 
 const CONTENT_LEFT: i32 = 10;
