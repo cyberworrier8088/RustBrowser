@@ -882,7 +882,7 @@ fn draw_favicon(frame: &mut [u8], img: &image::RgbaImage, x: i32, y: i32) {
             set_raw_pixel(frame, x + px as i32, y + py as i32, pixel.0);
         }
     }
-}
+} 
 
 /////////////////////////
 // End of file
