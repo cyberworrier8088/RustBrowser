@@ -5,10 +5,16 @@ body {
     padding: 30px;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 nav {
     display: flex;
     gap: 20px;
-    margin-bottom: 30px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
 }
 
 nav a {
@@ -35,8 +41,15 @@ h1 {
 }
 
 h2 {
-    color: #00ff88;
-    margin-top: 50px;
+    width: 100%;
+    max-width: 800px;
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    border: 1px solid #333;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
 }
 
 button {
@@ -46,10 +59,14 @@ button {
     border-radius: 10px;
     font-size: 18px;
     cursor: pointer;
+    color: black;
+    font-weight: bold;
+    transition: all 0.2s ease;
 }
 
 button:hover {
     background: #00cc70;
+    transform: translateY(-2px);
     
 }
 
@@ -63,10 +80,17 @@ footer {
 #example {
     width: 100%;
     max-width: 800px;
-    background: #ffffff;
+    background: #1e1e1e;
     padding: 20px;
     border-radius: 10px;
     overflow-x: auto;
     border: 1px solid #333;
     border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+p {
+    line-height: 1.8;
+    color: #d0d0d0;
+    max-width: 800px;
 }

@@ -3,9 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Mini Browser Book</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    
+
+    <nav>
+        <img src="assets/iconn.svg" alt="logo" class="logo">
+        <a href="index.html">Home</a>
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+    </nav>
+
+    <div class="container">
+
+        <h1>Mini Browser Book</h1>
+
+        <p>
+            Welcome to the Mini Browser documentation. This page explains
+            the HTML tags, browser features, and internal architecture
+            currently supported by Mini Browser.
+        </p>
+
+        <hr>
+
+        <h2>Headings (h1 - h6)</h2>
+
+        <p>
+            Headings are used for titles and section names. Larger heading
+            numbers create smaller text.
+        </p>
+
+        <pre>
+&lt;h1&gt;Main Title&lt;/h1&gt;
+&lt;h2&gt;Section Title&lt;/h2&gt;
+&lt;h3&gt;Sub Section&lt;/h3&gt;
+&lt;h4&gt;Heading&lt;/h4&gt;
+&lt;h5&gt;Heading&lt;/h5&gt;
+&lt;h6&gt;Heading&lt;/h6&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Paragraph (p)</h2>
+
+        <p>
+            Paragraphs are used for normal text content.
+        </p>
+
+        <pre>
+&lt;p&gt;Hello World!&lt;/p&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Links (a)</h2>
+
+        <p>
+            Links allow navigation between pages and websites.
+        </p>
+
+        <pre>
+&lt;a href="https://example.com"&gt;
+Visit Example
+&lt;/a&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Images (img)</h2>
+
+        <p>
+            Images display pictures from local files or internet URLs.
+        </p>
+
+        <pre>
+&lt;img src="cat.png"&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Lists (ul, li)</h2>
+
+        <p>
+            Lists are used for displaying multiple items.
+        </p>
+
+        <pre>
+&lt;ul&gt;
+    &lt;li&gt;Rust&lt;/li&gt;
+    &lt;li&gt;Browser&lt;/li&gt;
+    &lt;li&gt;HTML&lt;/li&gt;
+&lt;/ul&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Tables</h2>
+
+        <p>
+            Tables display information using rows and columns.
+        </p>
+
+        <pre>
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Name&lt;/td&gt;
+        &lt;td&gt;Age&lt;/td&gt;
+    &lt;/tr&gt;
+
+    &lt;tr&gt;
+        &lt;td&gt;Nabhan&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Div</h2>
+
+        <p>
+            Div elements are containers used to group content together.
+            Most modern website layouts are built using div elements.
+        </p>
+
+        <pre>
+&lt;div&gt;
+    &lt;h3&gt;Hello&lt;/h3&gt;
+    &lt;p&gt;Inside Div&lt;/p&gt;
+&lt;/div&gt;
+        </pre>
+
+        <hr>
+
+        <h2>Span</h2>
+
+        <p>
+            Span is an inline container used to style or group text.
+        </p>
+
+        <pre>
+&lt;span&gt;Hello Span&lt;/span&gt;
+        </pre>
+
+        <hr>
+
+        <h2 id="features">Supported Browser Features</h2>
+
+        <ul>
+            <li>HTML Parsing</li>
+            <li>DOM Tree</li>
+            <li>Layout Tree</li>
+            <li>Rendering Engine</li>
+            <li>Image Loading</li>
+            <li>Downloads</li>
+            <li>Tabs</li>
+            <li>Bookmarks</li>
+            <li>History Navigation</li>
+            <li>Text Selection</li>
+            <li>Copy To Clipboard</li>
+            <li>Basic CSS Colors</li>
+            <li>Basic Font Sizes</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="architecture">Browser Architecture</h2>
+
+        <p>
+            Mini Browser uses a simplified browser architecture inspired
+            by real browsers.
+        </p>
+
+        <pre>
+HTML
+ |
+DOM Parser
+ |
+DOM Tree
+ |
+Layout Tree
+ |
+Renderer
+ |
+Pixels
+        </pre>
+
+        <p>
+            The DOM Tree stores document structure, the Layout Tree
+            calculates positions and sizes, and the Renderer converts
+            everything into pixels displayed on screen. :)
+        </p>
+
+        <hr>
+
+    </div>
+
+    <footer>Mini Browser © 2026 <br> Thankyou</footer>
+
 </body>
 </html>
