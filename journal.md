@@ -93,3 +93,29 @@ styles
 children
 
 this allows the browser to understand document structure.
+
+## challenges
+
+this project was not easy.
+
+some major challenges included:
+
+## Understanding Browser Architecture
+
+at first i had no idea how browsers worked internally.
+
+learning dom tree, layout engine, and rendering system took significant reserch
+
+___
+
+## rust ownership
+
+many bugs came from:
+- ownership issues
+- borrow checker error
+- lifetime probm
+
+fixing these taught me a lot about rust.
+
+___
+
