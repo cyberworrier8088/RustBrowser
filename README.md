@@ -123,10 +123,14 @@ you can download this broswer from here:
 
 https://github.com/cyberworrier8088/RustBrowser/releases/tag/demo
 
+___
 
-## demo video
+
+## demo video (vedeio is broken becuse so sizey)
 
 ![video](https://cdn.hackclub.com/019eea60-c210-7e8a-a56d-761a05df3922/Recording%202026-06-21%20184009%20(1)%20(1).mp4)
+
+___
 
 ## License
 
