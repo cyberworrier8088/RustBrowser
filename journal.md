@@ -13,3 +13,5 @@ ___
 ## why i staryed this project
 
 i wanted to understand:
+- how browser download web page
+- how html becomes visible on screen
