@@ -100,12 +100,6 @@ this project was not easy.
 
 some major challenges included:
 
-## Understanding Browser Architecture
-
-at first i had no idea how browsers worked internally.
-
-learning dom tree, layout engine, and rendering system took significant reserch
-
 ___
 
 ## rust ownership
@@ -119,3 +113,26 @@ fixing these taught me a lot about rust.
 
 ___
 
+## layout migration
+
+migrating from direct dom rendering to a layout Tree was one of the largest refactors in the project.
+
+this change improved the overall architecture significantly.
+
+
+## lessons learned
+this project taught me:
+- rust programing
+- soft ware arch
+- browser internaly
+- layout systems
+- rendering pipeline
+- networking
+- git commit more beautufully i learned
+- project organization
+
+most important, it taught me that complex software can be understood by breaking problems into smaller pieces.
+
+## demo video
+
+[video_path]()
