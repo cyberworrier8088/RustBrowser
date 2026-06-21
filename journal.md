@@ -15,3 +15,30 @@ ___
 i wanted to understand:
 - how browser download web page
 - how html becomes visible on screen
+- how rendering engines work
+- how tabs and navigation work
+- etc
+
+instead of only reading about these toppics, i decided to build my own browser.
+
+___
+
+## reserch phase
+
+the first step was learning how real browsers work.
+
+i discovered the browser engineering book and spent time learning:
+- http requests
+- html parsing
+- dom tree
+- rendering
+- Layout systems
+- browser archi
+
+i also studied Servo, Mozila's expermental browser engine written in Rust.
+
+Servo is an amzing project but it is extremely complex. looking at its source code helped me undestand how much much work goes into buildung a modern browser.
+
+## technology stack
+### lang
+rust(Entire browser is written in rust)
