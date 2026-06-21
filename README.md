@@ -1,4 +1,4 @@
-![Hacktime :)](https://hackatime.hackclub.com/api/v1/badge/U0B312F4FS5/cyberworrier8088/RustBrowser)
+![Hacktime :)(](https://hackatime.hackclub.com/api/v1/badge/U0B312F4FS5/cyberworrier8088/RustBrowser)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Language](https://img.shields.io/badge/Language-Rust-orange.svg)
 ![Project](https://img.shields.io/badge/Project-Browser-green.svg)
