@@ -42,3 +42,54 @@ Servo is an amzing project but it is extremely complex. looking at its source co
 ## technology stack
 ### lang
 rust(Entire browser is written in rust)
+
+
+
+___
+
+## features implemented:
+1. HTML Parsing
+
+the browser can parse html documents and build an internal reperesention of the page
+
+supported tags include:
+- h1-h6
+- p
+- a
+- img
+- ul
+- li
+- table
+- tr
+- td
+- div
+- span
+- strong
+- b
+- i
+- em
+- hr
+- br
+
+___
+
+## dom tree
+one of the biggest milestones was implementing a real DOM tree.
+
+architecture:
+
+html
+|
+dom parser
+|
+dom tree
+
+each html element becomes a Node containing:
+
+tag name
+text
+attributes
+styles
+children
+
+this allows the browser to understand document structure.
